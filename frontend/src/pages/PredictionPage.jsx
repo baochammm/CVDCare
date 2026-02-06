@@ -31,9 +31,14 @@ import { useNavigate } from "react-router";
   return (
     <div className="flex items-center justify-center min-h-screen bg-base-100 p-6">
       <div className="w-full max-w-3xl bg-white rounded-2xl shadow-lg p-8">
-        <h1 className="text-2xl font-semibold text-primary text-center mb-6">
+        <h1 className="text-4xl font-semibold text-primary text-center mb-6">
           Health Data Input
         </h1>
+
+        <p className="text-sm text-gray-500 text-center mb-6">
+          By submitting this form, you confirm that all health data provided is accurate and truthful. Incorrect inputs may lead
+          to inaccurate predictions.
+        </p>
 
         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Age */}
@@ -44,8 +49,8 @@ import { useNavigate } from "react-router";
               name="age"
               value={formData.age}
               onChange={handleChange}
-              min="1"
-              max="120"
+              min="30"
+              max="65"
               className="input input-bordered w-full"
               required
             />

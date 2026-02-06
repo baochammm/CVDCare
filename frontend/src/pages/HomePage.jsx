@@ -6,7 +6,7 @@ const HomePage = () => {
         Welcome to CVD Care
       </h1>
       <p className="text-sm md:text-base text-gray-600 max-w-lg mb-6">
-        Here you can predict your cardiovascular health, track your past results, 
+        Here you can predict your cardiovascular health, track your past results 
         and gain insights to improve your lifestyle.
       </p>
 

@@ -23,3 +23,14 @@ export const getAuthUser = async () => {
     return null;
   }
 };
+
+export const getAllUsers = () => axiosInstance.get("/admin/users");
+
+export const deleteUser = (userId) =>
+  axiosInstance.delete(`/admin/users/${userId}`);
+
+export const getUserHealthData = (userId) =>
+  axiosInstance.get(`/admin/users/${userId}/health-data`);
+
+export const deleteHealthData = (id) =>
+  axiosInstance.delete(`/admin/health-data/${id}`);

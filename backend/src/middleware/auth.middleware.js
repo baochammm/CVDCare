@@ -13,21 +13,29 @@ export const protectRoute = async (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
 
-    if (!decoded) {
-      return res.status(401).json({ message: "Unauthorized - Invalid token" });
-    }
-
-    const user = await User.findById(decoded.userId).select("-password");
+    const user = await User.findById(decoded.userId).select(
+      "_id userName email role"
+    );
 
     if (!user) {
       return res.status(401).json({ message: "Unauthorized - User not found" });
     }
 
-    req.user = user;
+    req.user = {
+      _id: user._id,
+      role: user.role,
+    };
 
     next();
   } catch (error) {
     console.log("Error in protectRoute middleware", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
+};
+
+export const requireAdmin = (req, res, next) => {
+  if (req.user.role !== "admin") {
+    return res.status(403).json({ message: "Admin access only" });
+  }
+  next();
 };

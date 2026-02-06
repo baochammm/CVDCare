@@ -81,9 +81,13 @@ export async function login(req, res) {
     }
 
     // Create JWT token
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET_KEY, {
-      expiresIn: "7d",
-    });
+    const token = jwt.sign(
+      { userId: user._id, role: user.role },
+      process.env.JWT_SECRET_KEY,
+      {
+        expiresIn: "7d",
+      }
+    );
 
     // Set cookie
     res.cookie("jwt", token, {
@@ -93,7 +97,16 @@ export async function login(req, res) {
       secure: process.env.NODE_ENV === "production",
     });
 
-    res.status(200).json({ success: true, user });
+    res.status(200).json({
+      success: true,
+      user: {
+        _id: user._id,
+        userName: user.userName,
+        email: user.email,
+        role: user.role,
+        createdAt: user.createdAt,
+      },
+    });
   } catch (error) {
     console.log("Error in login controller:", error.message);
     res.status(500).json({ message: "Internal Server Error" });
