@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import axios from "axios";
+import { predictHealth } from "../lib/api";
 
 const ResultPage = () => {
   const location = useLocation();
@@ -35,34 +36,18 @@ const ResultPage = () => {
       return;
     }
 
-    const fetchPrediction = async () => {
-      try {
-        setLoading(true);
-        const res = await axios.post("http://localhost:8000/predict", inputData);
-        setResult(res.data);
-
-        // Save to history
-        await axios.post(
-          "http://localhost:5001/api/history/save",
-          {
-            ...inputData,
-            prediction: res.data.prediction,
-            risk_score: res.data.risk_score,
-            risk_level: res.data.risk_level,
-            top_factors: res.data.top_factors,
-            recommendations: res.data.recommendations ?? [],
-          },
-          {
-            withCredentials: true,
-          }
-        );
-      } catch (err) {
-        console.error("Prediction error:", err);
-        setError("Unable to fetch prediction. Please try again.");
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchPrediction = async () => {
+    try {
+      setLoading(true);
+      const res = await predictHealth(inputData);
+      setResult(res.data.predictionResult);
+    } catch (err) {
+      console.error("Prediction error:", err);
+      setError("Unable to fetch prediction. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
     fetchPrediction();
   }, [inputData]);

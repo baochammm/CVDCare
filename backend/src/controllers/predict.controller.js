@@ -1,5 +1,5 @@
 import axios from "axios";
-import HealthData from "../models/healthdata.model.js";
+import HealthData from "../models/healthData.js";
 
 export const predictHealth = async (req, res) => {
   try {
@@ -8,8 +8,8 @@ export const predictHealth = async (req, res) => {
 
     // Call ML backend
     const mlResponse = await axios.post(
-      "http://localhost:8000/predict",
-      inputData
+      `${process.env.ML_BACKEND_URL}/predict`,
+      inputData,
     );
 
     const { prediction, risk_score, risk_level, top_factors, recommendations } =

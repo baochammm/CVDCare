@@ -24,6 +24,11 @@ export const getAuthUser = async () => {
   }
 };
 
+export const predictHealth = (inputData) =>
+  axiosInstance.post("/predict", inputData);
+
+export const getMyHistory = () => axiosInstance.get("/history/my-history");
+
 export const getAllUsers = () => axiosInstance.get("/admin/users");
 
 export const deleteUser = (userId) =>

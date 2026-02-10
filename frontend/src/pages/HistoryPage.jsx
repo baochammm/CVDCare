@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { History } from "lucide-react";
-import axios from "axios";
+import { getMyHistory } from "../lib/api";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Label } from "recharts";
 
 const HistoryPage = () => {
@@ -12,9 +12,7 @@ const HistoryPage = () => {
     const fetchHistory = async () => {
       try {
         setLoading(true);
-        const res = await axios.get("http://localhost:5001/api/history/my-history", {
-          withCredentials: true,
-        });
+        const res = await getMyHistory();
         setHistory(res.data);
       } catch (err) {
         console.error(err);
@@ -28,7 +26,7 @@ const HistoryPage = () => {
   }, []);
 
   const chartData = history.map(item => ({
-    date: new Date(item.createdAt).getTime(),  // quan trọng
+    date: new Date(item.createdAt).getTime(),  
     risk_score: item.risk_score * 100
   }));
 
