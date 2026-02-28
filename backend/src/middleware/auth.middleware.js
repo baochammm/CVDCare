@@ -14,7 +14,7 @@ export const protectRoute = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
 
     const user = await User.findById(decoded.userId).select(
-      "_id userName email role"
+      "_id userName email role",
     );
 
     if (!user) {
@@ -23,6 +23,8 @@ export const protectRoute = async (req, res, next) => {
 
     req.user = {
       _id: user._id,
+      userName: user.userName,
+      email: user.email,
       role: user.role,
     };
 

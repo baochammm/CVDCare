@@ -26,7 +26,7 @@ const HistoryPage = () => {
   }, []);
 
   const chartData = history.map(item => ({
-    date: new Date(item.createdAt).getTime(),  
+    date: new Date(item.updatedAt).getTime(),  
     risk_score: item.risk_score * 100
   }));
 
@@ -70,7 +70,8 @@ const HistoryPage = () => {
                     <th>Prediction</th>
                     <th>Probability</th>
                     <th>Top Factors</th>
-                    <th>Date</th>
+                    <th>Date Created</th>
+                    <th>Date Updated</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -82,6 +83,7 @@ const HistoryPage = () => {
                       {/* Top 3 factors (only names) */}
                       <td>{item.top_factors.map(f => f.feature).join(", ")}</td>
                       <td>{new Date(item.createdAt).toLocaleString()}</td>
+                      <td>{new Date(item.updatedAt).toLocaleString()}</td>
                     </tr>
                   ))}
                 </tbody>

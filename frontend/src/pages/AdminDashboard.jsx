@@ -4,6 +4,7 @@ import {
   deleteUser,
   getUserHealthData,
   deleteHealthData,
+  updateHealthData,
 } from "../lib/api";
 
 const AdminDashboard = () => {
@@ -12,8 +13,10 @@ const AdminDashboard = () => {
   const [healthData, setHealthData] = useState([]);
 
   const [userToDelete, setUserToDelete] = useState(null);
-
   const [predictionToDelete, setPredictionToDelete] = useState(null);
+
+  const [healthDataToEdit, setHealthDataToEdit] = useState(null);
+  const [editForm, setEditForm] = useState({});
 
   useEffect(() => {
     fetchUsers();
@@ -59,6 +62,37 @@ const AdminDashboard = () => {
     setPredictionToDelete(null);
     document.getElementById("delete_prediction_modal").close(); 
   };
+
+  const handleUpdateHealthData = async () => {
+      try {
+        // Validate
+        if (!editForm.age || !editForm.height || !editForm.weight || !editForm.ap_hi || !editForm.ap_lo || !editForm.cholesterol || !editForm.gluc || editForm.smoke === undefined || editForm.alco === undefined || editForm.active === undefined) {
+          alert("Please fill in all required fields!");
+          return;
+        }
+        await updateHealthData(healthDataToEdit._id, editForm);
+
+        // Close modal
+        document.getElementById("edit_health_modal").close();
+
+        // Refresh data
+        const res = await getUserHealthData(selectedUser._id);
+        const sorted = res.data.healthData.sort(
+          (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
+        );
+        setHealthData(sorted);
+
+        // Reset form
+        setHealthDataToEdit(null);
+        setEditForm({});
+      } catch (error) {
+        console.error("Update error:", error);
+        alert(
+          `Cannot update: ${error.response?.data?.message || error.message}`
+        );
+      }
+    };
+    
   return (
     <div className="p-6 space-y-6">
       <h1 className="text-4xl font-bold">Admin Dashboard</h1>
@@ -147,7 +181,8 @@ const AdminDashboard = () => {
                   <th>Alcohol</th>
                   <th>Physically Active</th>
                   <th>Created</th>
-                  <th></th>
+                  <th>Updated</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -168,7 +203,7 @@ const AdminDashboard = () => {
                       </span>
                     </td>
                     <td>{(h.risk_score * 100).toFixed(1)}%</td>
-                    <td>{h.gender === 1 ? "Female" : "Male"}</td>
+                    <td>{h.gender === "female" ? "Female" : "Male"}</td>
                     <td>{h.age}</td>
                     <td>{h.height} cm</td>
                     <td>{h.weight} kg</td>
@@ -177,10 +212,35 @@ const AdminDashboard = () => {
                     <td>{h.cholesterol}</td>
                     <td>{h.gluc}</td>
                     <td>{h.smoke ? "Yes" : "No"}</td>
-                    <td>{h.alcohol ? "Yes" : "No"}</td>
+                    <td>{h.alco ? "Yes" : "No"}</td>
                     <td>{h.active ? "Yes" : "No"}</td>
                     <td>{new Date(h.createdAt).toLocaleString()}</td>
+                    <td>{new Date(h.updatedAt).toLocaleString()}</td>
                     <td>
+                      <button
+                        className="btn btn-xs btn-warning"
+                        onClick={() => {
+                          setHealthDataToEdit(h);
+                          setEditForm({
+                            age: h.age,
+                            gender: h.gender,
+                            height: h.height,
+                            weight: h.weight,
+                            ap_hi: h.ap_hi,
+                            ap_lo: h.ap_lo,
+                            cholesterol: h.cholesterol,
+                            gluc: h.gluc,
+                            smoke: h.smoke,
+                            alco: h.alco,
+                            active: h.active,
+                          });
+                          document
+                            .getElementById("edit_health_modal")
+                            .showModal();
+                        }}
+                      >
+                        Edit
+                      </button>
                       <button
                         className="btn btn-xs btn-error"
                         onClick={() => confirmDeletePrediction(h._id)}
@@ -239,6 +299,231 @@ const AdminDashboard = () => {
 
             <button className="btn btn-error" onClick={handleDeleteHealthData}>
               Delete
+            </button>
+          </div>
+        </div>
+      </dialog>
+
+      {/* EDIT HEALTH DATA MODAL */}
+      <dialog id="edit_health_modal" className="modal">
+        <div className="modal-box max-w-4xl">
+          <h3 className="font-bold text-lg mb-6 border-b pb-2">
+            Edit Health Data:{" "}
+            <span className="text-primary">{selectedUser?.userName}</span>
+          </h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Age */}
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-semibold">Age</span>
+              </label>
+              <input
+                type="number"
+                className="input input-bordered w-full"
+                value={editForm.age ?? ""}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, age: Number(e.target.value) })
+                }
+              />
+            </div>
+
+            {/* Gender */}
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-semibold">Gender</span>
+              </label>
+              <select
+                className="select select-bordered w-full"
+                value={editForm.gender || "male"}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, gender: e.target.value })
+                }
+              >
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+              </select>
+            </div>
+
+            {/* Height */}
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-semibold">Height (cm)</span>
+              </label>
+              <input
+                type="number"
+                className="input input-bordered w-full"
+                value={editForm.height ?? ""}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, height: Number(e.target.value) })
+                }
+              />
+            </div>
+
+            {/* Weight */}
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-semibold">Weight (kg)</span>
+              </label>
+              <input
+                type="number"
+                className="input input-bordered w-full"
+                value={editForm.weight ?? ""}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, weight: Number(e.target.value) })
+                }
+              />
+            </div>
+
+            {/* Systolic BP */}
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-semibold">
+                  Systolic BP (mmHg)
+                </span>
+              </label>
+              <input
+                type="number"
+                className="input input-bordered w-full"
+                value={editForm.ap_hi ?? ""}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, ap_hi: Number(e.target.value) })
+                }
+              />
+            </div>
+
+            {/* Diastolic BP */}
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-semibold">
+                  Diastolic BP (mmHg)
+                </span>
+              </label>
+              <input
+                type="number"
+                className="input input-bordered w-full"
+                value={editForm.ap_lo ?? ""}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, ap_lo: Number(e.target.value) })
+                }
+              />
+            </div>
+
+            {/* Cholesterol */}
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-semibold">Cholesterol</span>
+              </label>
+              <select
+                className="select select-bordered w-full"
+                value={editForm.cholesterol || 1}
+                onChange={(e) =>
+                  setEditForm({
+                    ...editForm,
+                    cholesterol: Number(e.target.value),
+                  })
+                }
+              >
+                <option value={1}>Normal</option>
+                <option value={2}>Above Normal</option>
+                <option value={3}>Well Above Normal</option>
+              </select>
+            </div>
+
+            {/* Glucose */}
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-semibold">Glucose</span>
+              </label>
+              <select
+                className="select select-bordered w-full"
+                value={editForm.gluc || 1}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, gluc: Number(e.target.value) })
+                }
+              >
+                <option value={1}>Normal</option>
+                <option value={2}>Above Normal</option>
+                <option value={3}>Well Above Normal</option>
+              </select>
+            </div>
+
+            {/* Smoking */}
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-semibold">Smoking</span>
+              </label>
+              <select
+                className="select select-bordered w-full"
+                value={String(editForm.smoke)}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, smoke: e.target.value === "true" })
+                }
+              >
+                <option value="false">No</option>
+                <option value="true">Yes</option>
+              </select>
+            </div>
+
+            {/* Alcohol */}
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-semibold">
+                  Alcohol Consumption
+                </span>
+              </label>
+              <select
+                className="select select-bordered w-full"
+                value={String(editForm.alco)}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, alco: e.target.value === "true" })
+                }
+              >
+                <option value="false">No</option>
+                <option value="true">Yes</option>
+              </select>
+            </div>
+
+            {/* Physical Activity */}
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-semibold">
+                  Physical Activity
+                </span>
+              </label>
+              <select
+                className="select select-bordered w-full"
+                value={String(editForm.active)}
+                onChange={(e) =>
+                  setEditForm({
+                    ...editForm,
+                    active: e.target.value === "true",
+                  })
+                }
+              >
+                <option value="false">No</option>
+                <option value="true">Yes</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Buttons */}
+          <div className="modal-action mt-8">
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() =>
+                document.getElementById("edit_health_modal").close()
+              }
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary px-10"
+              onClick={handleUpdateHealthData}
+            >
+              Save & Predict Again
             </button>
           </div>
         </div>

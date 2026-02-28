@@ -1,6 +1,9 @@
 import User from "../models/User.js";
 import HealthData from "../models/healthData.js";
 
+// Environment variable for ML API URL
+const ML_API_URL = process.env.ML_BACKEND_URL || "http://localhost:8000";
+
 // GET /api/admin/users (get all users)
 export const getAllUsers = async (req, res) => {
   try {
@@ -72,5 +75,83 @@ export const deleteHealthData = async (req, res) => {
   } catch (error) {
     console.log("Admin deleteHealthData error:", error.message);
     res.status(500).json({ message: "Failed to delete health data" });
+  }
+};
+
+// PUT /api/admin/health-data/:id
+export const updateHealthData = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Prevent changing the associated user
+    if (req.body.user) {
+      return res.status(400).json({ message: "Cannot update user field" });
+    }
+
+    const updated = await HealthData.findByIdAndUpdate(id, req.body, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!updated) {
+      return res.status(404).json({ message: "Health data not found" });
+    }
+
+    try {
+      const mlPayload = {
+        age: updated.age,
+        gender: updated.gender,
+        height: updated.height,
+        weight: updated.weight,
+        ap_hi: updated.ap_hi,
+        ap_lo: updated.ap_lo,
+        cholesterol: updated.cholesterol,
+        gluc: updated.gluc,
+        smoke: updated.smoke ? "true" : "false",
+        alco: updated.alco ? "true" : "false",
+        active: updated.active ? "true" : "false",
+      };
+      const mlUrl = `${ML_API_URL}/predict`;
+      const mlResponse = await fetch(mlUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(mlPayload),
+      });
+
+      if (!mlResponse.ok) {
+        const errorText = await mlResponse.text();
+        throw new Error(`ML API error: ${errorText}`);
+      }
+
+      const mlData = await mlResponse.json();
+
+      // Update prediction result in database
+      updated.prediction = mlData.prediction;
+      updated.risk_score = mlData.risk_score;
+      updated.risk_level = mlData.risk_level;
+      updated.top_factors = mlData.top_factors;
+      updated.recommendations = mlData.recommendations || [];
+
+      await updated.save();
+
+      console.log("Prediction recalculated and saved!");
+
+      res.status(200).json({
+        message: "Health data updated and prediction recalculated successfully",
+        healthData: updated,
+      });
+    } catch (mlError) {
+      // If ML call fails, still return the updated data without prediction
+      res.status(200).json({
+        message: "Health data updated but prediction recalculation failed",
+        healthData: updated,
+        warning: mlError.message,
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to update health data",
+      error: error.message,
+    });
   }
 };

@@ -39,3 +39,6 @@ export const getUserHealthData = (userId) =>
 
 export const deleteHealthData = (id) =>
   axiosInstance.delete(`/admin/health-data/${id}`);
+
+export const updateHealthData = (id, updatedData) =>
+  axiosInstance.put(`/admin/health-data/${id}`, updatedData);
