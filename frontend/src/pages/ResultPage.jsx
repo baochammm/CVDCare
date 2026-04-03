@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
-import axios from "axios";
 import { predictHealth } from "../lib/api";
 
 const ResultPage = () => {

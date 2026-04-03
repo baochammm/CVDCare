@@ -42,3 +42,13 @@ export const deleteHealthData = (id) =>
 
 export const updateHealthData = (id, updatedData) =>
   axiosInstance.put(`/admin/health-data/${id}`, updatedData);
+
+export const createRequest = (message) =>
+  axiosInstance.post("/support", { message });
+
+export const getMyRequests = () => axiosInstance.get("/support/my");
+
+export const getAllRequests = () => axiosInstance.get("/support/admin/all");
+
+export const updateRequestStatus = (id, status) =>
+  axiosInstance.patch(`/support/admin/${id}/status`, { status });

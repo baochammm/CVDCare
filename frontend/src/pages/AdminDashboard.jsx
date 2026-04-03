@@ -5,7 +5,10 @@ import {
   getUserHealthData,
   deleteHealthData,
   updateHealthData,
+  getAllRequests,
+  updateRequestStatus
 } from "../lib/api";
+import toast from "react-hot-toast";
 
 const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
@@ -18,8 +21,11 @@ const AdminDashboard = () => {
   const [healthDataToEdit, setHealthDataToEdit] = useState(null);
   const [editForm, setEditForm] = useState({});
 
+  const [supportRequests, setSupportRequests] = useState([]);
+
   useEffect(() => {
     fetchUsers();
+    fetchSupportRequests();
   }, []);
 
   const fetchUsers = async () => {
@@ -39,28 +45,30 @@ const AdminDashboard = () => {
     document.getElementById("health_modal").showModal();
   };
 
-  const confirmDeleteUser = (id) => {
-    setUserToDelete(id);
-    document.getElementById("delete_user_modal").showModal();
-  };
-
   const handleDeleteUser = async () => {
     await deleteUser(userToDelete);
     setUserToDelete(null);
     document.getElementById("delete_user_modal").close(); 
     fetchUsers();
+    toast.success("User deleted successfully!");
   };
 
-  const confirmDeletePrediction = (id) => {
-    setPredictionToDelete(id);
-    document.getElementById("delete_prediction_modal").showModal();
+    const confirmDeleteUser = (id) => {
+    setUserToDelete(id);
+    document.getElementById("delete_user_modal").showModal();
   };
 
   const handleDeleteHealthData = async () => {
     await deleteHealthData(predictionToDelete);
     setHealthData((prev) => prev.filter((item) => item._id !== predictionToDelete));
     setPredictionToDelete(null);
-    document.getElementById("delete_prediction_modal").close(); 
+    document.getElementById("delete_prediction_modal").close();
+    toast.success("Record deleted successfully!"); 
+  };
+
+    const confirmDeletePrediction = (id) => {
+    setPredictionToDelete(id);
+    document.getElementById("delete_prediction_modal").showModal();
   };
 
   const handleUpdateHealthData = async () => {
@@ -74,7 +82,7 @@ const AdminDashboard = () => {
 
         // Close modal
         document.getElementById("edit_health_modal").close();
-
+        toast.success("Health data updated successfully!");
         // Refresh data
         const res = await getUserHealthData(selectedUser._id);
         const sorted = res.data.healthData.sort(
@@ -92,10 +100,22 @@ const AdminDashboard = () => {
         );
       }
     };
-    
+
+  const fetchSupportRequests = async () => {
+    const res = await getAllRequests();
+    setSupportRequests(res.data);
+  };
+
+  const handleStatusChange = async (id, status) => {
+    await updateRequestStatus(id, status);
+    fetchSupportRequests();
+    toast.success(`Status updated to ${status}!`);
+  };
   return (
     <div className="p-6 space-y-6">
-      <h1 className="text-4xl font-bold">Admin Dashboard</h1>
+      <h1 className="text-4xl font-bold font-mono bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+        Admin Dashboard
+      </h1>
 
       {/* USERS TABLE */}
       <div className="card bg-base-100 shadow">
@@ -528,6 +548,52 @@ const AdminDashboard = () => {
           </div>
         </div>
       </dialog>
+      {/* SUPPORT REQUESTS */}
+<div className="card bg-base-100 shadow">
+  <div className="card-body">
+    <h2 className="card-title">Support Requests</h2>
+    <div className="overflow-x-auto">
+      <table className="table text-xl">
+        <thead className="bg-gray-200 text-lg font-semibold">
+          <tr>
+            <th className="bg-gray-300">#</th>
+            <th className="bg-gray-300">User</th>
+            <th className="bg-gray-300">Email</th>
+            <th className="bg-gray-300">Message</th>
+            <th className="bg-gray-300">Status</th>
+            <th className="bg-gray-300">Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {supportRequests.length === 0 && (
+            <tr>
+              <td colSpan="6" className="text-center opacity-60">No support requests</td>
+            </tr>
+          )}
+          {supportRequests.map((req, idx) => (
+            <tr key={req._id}>
+              <td>{idx + 1}</td>
+              <td>{req.user?.userName}</td>
+              <td>{req.user?.email}</td>
+              <td className="max-w-xs">{req.message}</td>
+              <td>
+                <select
+                  className="select select-bordered select-sm"
+                  value={req.status}
+                  onChange={(e) => handleStatusChange(req._id, e.target.value)}
+                >
+                  <option value="processing">Processing</option>
+                  <option value="processed">Processed</option>
+                </select>
+              </td>
+              <td>{new Date(req.createdAt).toLocaleString()}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
     </div>
   );
 };

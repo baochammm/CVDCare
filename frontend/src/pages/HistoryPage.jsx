@@ -36,7 +36,7 @@ const HistoryPage = () => {
   };
 
   return (
-    <div className="h-screen flex flex-col items-center justify-start p-4 sm:p-6 md:p-8" data-theme="corporate">
+    <div className="h-screen flex flex-col items-center justify-start p-4 sm:p-6 md:p-8">
       <div className="border border-primary/25 w-full max-w-6xl mx-auto bg-base-100 rounded-xl shadow-lg overflow-auto">
         {/* HEADER */}
         <div className="flex items-center gap-2 p-6 border-b border-primary/25">

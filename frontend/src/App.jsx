@@ -7,6 +7,7 @@ import PredictionPage from "./pages/PredictionPage";
 import HomePage from "./pages/HomePage";
 import ResultPage from "./pages/ResultPage";
 import HistoryPage from "./pages/HistoryPage";
+import SupportRequestPage from "./pages/SupportRequestPage";
 import Layout from "./components/Layout";
 import AdminDashboard from "./pages/AdminDashboard";
 
@@ -113,6 +114,21 @@ const App = () => {
             )
           }
         />
+
+        {/* SUPPORT REQUEST */}
+        <Route
+          path="/request"
+          element={
+            isAuthenticated ? (
+              <Layout showSidebar={true}>
+                <SupportRequestPage />
+              </Layout>
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
+
       </Routes>
 
       <Toaster />
