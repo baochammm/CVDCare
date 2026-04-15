@@ -5,6 +5,7 @@ import { Toaster } from "react-hot-toast";
 import useAuthUser from "./hooks/useAuthUser";
 import PredictionPage from "./pages/PredictionPage";
 import HomePage from "./pages/HomePage";
+import ProfilePage from "./pages/ProfilePage";
 import ResultPage from "./pages/ResultPage";
 import HistoryPage from "./pages/HistoryPage";
 import SupportRequestPage from "./pages/SupportRequestPage";
@@ -94,6 +95,20 @@ const App = () => {
             isAuthenticated ? (
               <Layout showSidebar={true}>
                 <HistoryPage />
+              </Layout>
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
+
+        {/* PROFILE */}
+        <Route
+          path="/profile"
+          element={
+            isAuthenticated ? (
+              <Layout showSidebar={true}>
+                <ProfilePage />
               </Layout>
             ) : (
               <Navigate to="/login" />

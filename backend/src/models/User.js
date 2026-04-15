@@ -8,6 +8,10 @@ const userSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
+    displayName: {
+      type: String,
+      default: "",
+    },
     email: {
       type: String,
       required: true,
@@ -18,13 +22,17 @@ const userSchema = new mongoose.Schema(
       required: true,
       minlength: 6,
     },
+    city: {
+      type: String,
+      default: "",
+    },
     role: {
       type: String,
       enum: ["user", "admin"],
       default: "user",
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 // Hash password before saving the user
@@ -44,7 +52,7 @@ userSchema.pre("save", async function (next) {
 userSchema.methods.matchPassword = async function (enteredPassword) {
   const isPasswordCorrect = await bcrypt.compare(
     enteredPassword,
-    this.password
+    this.password,
   );
   return isPasswordCorrect;
 };

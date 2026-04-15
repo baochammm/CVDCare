@@ -49,3 +49,21 @@ export const updateRequestStatus = async (req, res) => {
     res.status(500).json({ message: "Error updating status" });
   }
 };
+
+export const deleteRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const isAdmin = req.user.role === "admin";
+
+    const query = isAdmin ? { _id: id } : { _id: id, user: req.user._id };
+    const request = await SupportRequest.findOneAndDelete(query);
+
+    if (!request) {
+      return res.status(404).json({ message: "Request not found" });
+    }
+
+    res.status(200).json({ message: "Request deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Error deleting request" });
+  }
+};

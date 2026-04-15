@@ -14,20 +14,6 @@ const ResultPage = () => {
   const [showFactors, setShowFactors] = useState(false);
   const [showRecommendations, setShowRecommendations] = useState(false);
 
-  const friendlyNames = {
-    gender: "Gender",
-    height: "Height",
-    weight: "Weight",
-    ap_hi: "Systolic Blood Pressure",
-    ap_lo: "Diastolic Blood Pressure",
-    cholesterol: "Cholesterol Level",
-    gluc: "Glucose Level",
-    smoke: "Smoking Status",
-    alco: "Alcohol Intake",
-    active: "Physical Activity",
-    age: "Age",
-  };
-
   useEffect(() => {
     if (!inputData) {
       setNoData(true);
@@ -147,16 +133,16 @@ const ResultPage = () => {
           <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
             <div className="bg-white p-6 rounded-lg max-w-lg w-full text-center">
               <h3 className="text-4xl font-bold mb-4">Top 3 Factors</h3>
-                <div className="flex flex-col gap-4 items-center text-xl font-medium">
-                  {result.top_factors.map((f, idx) => (
-                    <span
-                      key={idx}
-                      className="badge badge-primary badge-outline text-xl px-6 py-3"
-                    >
-                      {friendlyNames[f.feature] || f.feature}
+              <div className="flex flex-col gap-4 items-center text-xl font-medium">
+                {result.top_factors.map((f, idx) => (
+                  <div key={idx} className="tooltip tooltip-bottom w-full" data-tip={f.description}>
+                    <span className="badge badge-primary badge-outline text-xl px-6 py-3 w-full">
+                      {f.feature}
                     </span>
+                  </div>
                 ))}
               </div>
+              <p className="text-sm text-gray-400 mt-4">Hover over each factor to learn more</p>
               <button className="btn btn-primary mt-6" onClick={() => setShowFactors(false)}>
                 Close
               </button>

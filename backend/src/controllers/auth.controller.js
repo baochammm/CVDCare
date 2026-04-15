@@ -40,7 +40,7 @@ export async function signup(req, res) {
     const token = jwt.sign(
       { userId: newUser._id },
       process.env.JWT_SECRET_KEY,
-      { expiresIn: "7d" }
+      { expiresIn: "7d" },
     );
 
     // set cookie
@@ -86,7 +86,7 @@ export async function login(req, res) {
       process.env.JWT_SECRET_KEY,
       {
         expiresIn: "7d",
-      }
+      },
     );
 
     // Set cookie
@@ -102,8 +102,10 @@ export async function login(req, res) {
       user: {
         _id: user._id,
         userName: user.userName,
+        displayName: user.displayName,
         email: user.email,
         role: user.role,
+        city: user.city,
         createdAt: user.createdAt,
       },
     });

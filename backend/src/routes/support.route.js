@@ -5,6 +5,7 @@ import {
   getMyRequests,
   getAllRequests,
   updateRequestStatus,
+  deleteRequest,
 } from "../controllers/support.controller.js";
 
 const router = express.Router();
@@ -18,5 +19,6 @@ router.patch(
   requireAdmin,
   updateRequestStatus,
 );
+router.delete("/:id", protectRoute, deleteRequest);
 
 export default router;

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Headphones } from "lucide-react";
-import { createRequest, getMyRequests } from "../lib/api";
+import { createRequest, getMyRequests, deleteRequest } from "../lib/api";
 import toast from "react-hot-toast";
 
 const SupportRequestPage = () => {
@@ -8,6 +8,7 @@ const SupportRequestPage = () => {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [requestToDelete, setRequestToDelete] = useState(null);
 
   useEffect(() => {
     fetchRequests();
@@ -51,6 +52,18 @@ const SupportRequestPage = () => {
     if (status === "processing") return "badge badge-warning";
     if (status === "closed") return "badge badge-ghost";
     return "badge badge-info";
+  };
+
+  const handleDeleteRequest = async () => {
+    try {
+      await deleteRequest(requestToDelete);
+      toast.success("Request deleted successfully!");
+      setRequestToDelete(null);
+      document.getElementById("delete_request_modal").close();
+      fetchRequests();
+    } catch (err) {
+      toast.error("Failed to delete request");
+    }
   };
 
   return (
@@ -113,6 +126,7 @@ const SupportRequestPage = () => {
                     <th>Message</th>
                     <th>Status</th>
                     <th>Date</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -126,6 +140,17 @@ const SupportRequestPage = () => {
                         </span>
                       </td>
                       <td>{new Date(req.createdAt).toLocaleString()}</td>
+                      <td>
+                        <button
+                          className="btn btn-sm btn-error"
+                            onClick={() => {
+                            setRequestToDelete(req._id);
+                            document.getElementById("delete_request_modal").showModal();
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -135,6 +160,21 @@ const SupportRequestPage = () => {
         )}
 
       </div>
+        {/* DELETE CONFIRMATION MODAL */}
+      <dialog id="delete_request_modal" className="modal">
+        <div className="modal-box">
+          <h3 className="font-bold text-lg">Delete Request?</h3>
+          <p className="py-4">This will permanently delete this support request.</p>
+          <div className="modal-action">
+            <form method="dialog">
+              <button className="btn">Cancel</button>
+            </form>
+            <button className="btn btn-error" onClick={handleDeleteRequest}>
+              Delete
+            </button>
+          </div>
+        </div>
+      </dialog>
     </div>
   );
 };

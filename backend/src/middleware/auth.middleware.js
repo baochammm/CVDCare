@@ -14,7 +14,7 @@ export const protectRoute = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
 
     const user = await User.findById(decoded.userId).select(
-      "_id userName email role",
+      "_id userName displayName email role city",
     );
 
     if (!user) {
@@ -24,13 +24,22 @@ export const protectRoute = async (req, res, next) => {
     req.user = {
       _id: user._id,
       userName: user.userName,
+      displayName: user.displayName,
       email: user.email,
       role: user.role,
+      city: user.city,
     };
 
     next();
   } catch (error) {
-    console.log("Error in protectRoute middleware", error);
+    if (error.name === "TokenExpiredError") {
+      return res
+        .status(401)
+        .json({ message: "Token expired, please login again" });
+    }
+    if (error.name === "JsonWebTokenError") {
+      return res.status(401).json({ message: "Invalid token" });
+    }
     res.status(500).json({ message: "Internal Server Error" });
   }
 };

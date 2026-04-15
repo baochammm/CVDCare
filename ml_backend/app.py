@@ -31,19 +31,70 @@ FEATURE_NAMES = [
 ]
 
 FEATURE_DISPLAY_NAMES = {
-    'age_years': 'Age',
-    'bmi': 'Body Mass Index (BMI)',
-    'map': 'Mean Arterial Pressure',
-    'pulse_pressure': 'Pulse Pressure',
-    'lifestyle_risk': 'Lifestyle Risk',
-    'hypertension_stage': 'Hypertension Stage',
-    'cholesterol_gluc_interaction': 'Cholesterol-Glucose Interaction',
-    'gender': 'Gender',
-    'cholesterol': 'Cholesterol',
-    'gluc': 'Glucose',
-    'smoke': 'Smoking',
-    'alco': 'Alcohol Consumption',
-    'active': 'Physical Activity'
+    'age_years': {
+        'name': 'Age',
+        'description': 'Your age in years. The risk of cardiovascular diseases generally increases as you get older.'
+    },
+
+    'bmi': {
+        'name': 'Body Mass Index (BMI)',
+        'description': 'A measure of body fat based on your height and weight. Higher BMI may indicate overweight or obesity, which can increase the risk of heart disease and other health problems.'
+    },
+
+    'map': {
+        'name': 'Mean Arterial Pressure',
+        'description': 'The average pressure in your arteries during one heartbeat cycle. It reflects how well blood is being delivered to your organs. Higher values may indicate increased strain on your blood vessels.'
+    },
+
+    'pulse_pressure': {
+        'name': 'Pulse Pressure',
+        'description': 'The difference between your systolic and diastolic blood pressure. Abnormal values may indicate issues with arterial stiffness or heart function.'
+    },
+
+    'lifestyle_risk': {
+        'name': 'Lifestyle Risk Score',
+        'description': 'A combined score based on smoking, alcohol consumption, and physical inactivity. A higher score indicates a less healthy lifestyle and a greater risk of cardiovascular disease.'
+    },
+
+    'hypertension_stage': {
+        'name': 'Hypertension Stage',
+        'description': 'A classification of your blood pressure level (from normal to hypertensive crisis) based on your systolic and diastolic readings. Higher stages indicate more severe high blood pressure and greater health risks.'
+    },
+
+    'cholesterol_gluc_interaction': {
+        'name': 'Cholesterol & Glucose Interaction',
+        'description': 'A combined indicator of your cholesterol and blood sugar levels. High values in both can significantly increase the risk of heart disease and metabolic disorders.'
+    },
+
+    'gender': {
+        'name': 'Gender',
+        'description': 'Your biological sex. Certain cardiovascular risks may vary between males and females due to hormonal and physiological differences.'
+    },
+
+    'cholesterol': {
+        'name': 'Cholesterol Level',
+        'description': 'Your cholesterol level (normal, above normal, or well above normal). High cholesterol can lead to plaque buildup in arteries and increase the risk of heart disease.'
+    },
+
+    'gluc': {
+        'name': 'Blood Glucose Level',
+        'description': 'Your blood sugar level. Elevated glucose may indicate diabetes or insulin resistance, which are major risk factors for cardiovascular disease.'
+    },
+
+    'smoke': {
+        'name': 'Smoking',
+        'description': 'Indicates whether you smoke. Smoking damages blood vessels and significantly increases the risk of heart disease and stroke.'
+    },
+
+    'alco': {
+        'name': 'Alcohol Consumption',
+        'description': 'Indicates whether you consume alcohol. Excessive alcohol intake can raise blood pressure and contribute to heart and liver diseases.'
+    },
+
+    'active': {
+        'name': 'Physical Activity',
+        'description': 'Indicates whether you engage in regular physical activity. Staying active helps maintain heart health, while inactivity increases the risk of cardiovascular problems.'
+    }
 }
 
 RISK_THRESHOLDS = {'low': 0.3, 'medium': 0.7}
@@ -326,7 +377,11 @@ def predict_health(data: HealthData):
 
         top_idx = np.argsort(np.abs(shap_arr))[::-1][:3]
         top_factors = [
-            {"feature": FEATURE_DISPLAY_NAMES[FEATURE_NAMES[int(i)]], "value": float(shap_arr[i])}
+            {
+                "feature": FEATURE_DISPLAY_NAMES[FEATURE_NAMES[int(i)]]['name'],
+                "description": FEATURE_DISPLAY_NAMES[FEATURE_NAMES[int(i)]]['description'],
+                "value": float(shap_arr[i])
+            }
             for i in top_idx
         ]
 

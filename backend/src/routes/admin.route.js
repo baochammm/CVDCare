@@ -3,8 +3,7 @@ import {
   getAllUsers,
   deleteUser,
   getUserHealthData,
-  deleteHealthData,
-  updateHealthData,
+  restoreHealthData,
 } from "../controllers/admin.controller.js";
 import { protectRoute, requireAdmin } from "../middleware/auth.middleware.js";
 
@@ -17,7 +16,6 @@ router.get("/users", getAllUsers);
 router.delete("/users/:id", deleteUser);
 
 router.get("/users/:id/health-data", getUserHealthData);
-router.delete("/health-data/:id", deleteHealthData);
-router.put("/health-data/:id", updateHealthData);
+router.patch("/health-data/:id/restore", restoreHealthData);
 
 export default router;
