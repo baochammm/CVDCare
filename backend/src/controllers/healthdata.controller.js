@@ -18,6 +18,21 @@ export const getMyHistory = async (req, res) => {
   }
 };
 
+export const getLatestPrediction = async (req, res) => {
+  try {
+    const latest = await HealthData.findOne({
+      user: req.user._id,
+      isDeleted: false,
+    }).sort({ createdAt: -1 }); // newest first
+
+    if (!latest) return res.status(404).json({ error: "No prediction found" });
+
+    res.json(latest);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to load latest prediction" });
+  }
+};
+
 export const deleteHealthData = async (req, res) => {
   try {
     const { id } = req.params;

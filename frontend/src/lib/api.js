@@ -39,6 +39,8 @@ export const predictHealth = (inputData) =>
 
 export const getMyHistory = () => axiosInstance.get("/history/my-history");
 
+export const getLatestPrediction = () => axiosInstance.get("/history/latest");
+
 export const deleteHealthData = (id) => axiosInstance.delete(`/history/${id}`);
 
 export const updateHealthData = (id, data) =>
