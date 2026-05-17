@@ -9,6 +9,7 @@ import historyRoutes from "./routes/healthdata.route.js";
 import adminRoutes from "./routes/admin.route.js";
 import predictRoutes from "./routes/predict.route.js";
 import supportRoutes from "./routes/support.route.js";
+import hospitalRoutes from "./routes/hospital.route.js";
 import { connectDB } from "./lib/database.js";
 
 const app = express();
@@ -30,6 +31,7 @@ app.use("/api/history", historyRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/predict", predictRoutes);
 app.use("/api/support", supportRoutes);
+app.use("/api/hospitals", hospitalRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

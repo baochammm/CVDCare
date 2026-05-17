@@ -21,7 +21,13 @@ export const updateProfile = async (req, res) => {
     if (!user) return res.status(404).json({ message: "User not found" });
 
     if (displayName !== undefined) user.displayName = displayName;
-    if (city !== undefined) user.city = city;
+    if (city !== undefined) {
+      user.city = {
+        formattedAddress: city.formattedAddress || "",
+        lat: city.lat ?? null,
+        lng: city.lng ?? null,
+      };
+    }
 
     await user.save();
 

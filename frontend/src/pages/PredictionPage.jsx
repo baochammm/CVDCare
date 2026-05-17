@@ -80,7 +80,7 @@ import { useNavigate } from "react-router";
               name="height"
               value={formData.height}
               onChange={handleChange}
-              min="100"
+              min="55"
               max="250"
               className="input input-bordered w-full"
               required
@@ -95,7 +95,7 @@ import { useNavigate } from "react-router";
               name="weight"
               value={formData.weight}
               onChange={handleChange}
-              min="30"
+              min="10"
               max="200"
               className="input input-bordered w-full"
               required
@@ -111,7 +111,7 @@ import { useNavigate } from "react-router";
               value={formData.ap_hi}
               onChange={handleChange}
               min="50"
-              max="180"
+              max="250"
               className="input input-bordered w-full"
               required
             />
@@ -126,7 +126,7 @@ import { useNavigate } from "react-router";
               value={formData.ap_lo}
               onChange={handleChange}
               min="30"
-              max="120"
+              max="150"
               className="input input-bordered w-full"
               required
             />

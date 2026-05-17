@@ -68,3 +68,6 @@ export const getAllRequests = () => axiosInstance.get("/support/admin/all");
 
 export const updateRequestStatus = (id, status) =>
   axiosInstance.patch(`/support/admin/${id}/status`, { status });
+
+export const getNearbyHospitals = (lat, lng) =>
+  axiosInstance.get(`/hospitals/nearby?lat=${lat}&lng=${lng}`);

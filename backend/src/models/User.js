@@ -23,8 +23,9 @@ const userSchema = new mongoose.Schema(
       minlength: 6,
     },
     city: {
-      type: String,
-      default: "",
+      formattedAddress: { type: String, default: "" },
+      lat: { type: Number, default: null },
+      lng: { type: Number, default: null },
     },
     role: {
       type: String,

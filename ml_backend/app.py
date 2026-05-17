@@ -24,77 +24,28 @@ app.add_middleware(
 # Constants
 MODEL_PATH = "decision_tree_model.pkl"
 CLIP_BOUNDS_PATH = "clip_bounds.pkl"
+
 FEATURE_NAMES = [
     'gender', 'cholesterol', 'gluc', 'smoke', 'alco', 'active',
     'age_years', 'bmi', 'map', 'pulse_pressure',
     'lifestyle_risk', 'cholesterol_gluc_interaction', 'hypertension_stage'
 ]
 
-FEATURE_DISPLAY_NAMES = {
-    'age_years': {
-        'name': 'Age',
-        'description': 'Your age in years. The risk of cardiovascular diseases generally increases as you get older.'
-    },
-
-    'bmi': {
-        'name': 'Body Mass Index (BMI)',
-        'description': 'A measure of body fat based on your height and weight. Higher BMI may indicate overweight or obesity, which can increase the risk of heart disease and other health problems.'
-    },
-
-    'map': {
-        'name': 'Mean Arterial Pressure',
-        'description': 'The average pressure in your arteries during one heartbeat cycle. It reflects how well blood is being delivered to your organs. Higher values may indicate increased strain on your blood vessels.'
-    },
-
-    'pulse_pressure': {
-        'name': 'Pulse Pressure',
-        'description': 'The difference between your systolic and diastolic blood pressure. Abnormal values may indicate issues with arterial stiffness or heart function.'
-    },
-
-    'lifestyle_risk': {
-        'name': 'Lifestyle Risk Score',
-        'description': 'A combined score based on smoking, alcohol consumption, and physical inactivity. A higher score indicates a less healthy lifestyle and a greater risk of cardiovascular disease.'
-    },
-
-    'hypertension_stage': {
-        'name': 'Hypertension Stage',
-        'description': 'A classification of your blood pressure level (from normal to hypertensive crisis) based on your systolic and diastolic readings. Higher stages indicate more severe high blood pressure and greater health risks.'
-    },
-
-    'cholesterol_gluc_interaction': {
-        'name': 'Cholesterol & Glucose Interaction',
-        'description': 'A combined indicator of your cholesterol and blood sugar levels. High values in both can significantly increase the risk of heart disease and metabolic disorders.'
-    },
-
-    'gender': {
-        'name': 'Gender',
-        'description': 'Your biological sex. Certain cardiovascular risks may vary between males and females due to hormonal and physiological differences.'
-    },
-
-    'cholesterol': {
-        'name': 'Cholesterol Level',
-        'description': 'Your cholesterol level (normal, above normal, or well above normal). High cholesterol can lead to plaque buildup in arteries and increase the risk of heart disease.'
-    },
-
-    'gluc': {
-        'name': 'Blood Glucose Level',
-        'description': 'Your blood sugar level. Elevated glucose may indicate diabetes or insulin resistance, which are major risk factors for cardiovascular disease.'
-    },
-
-    'smoke': {
-        'name': 'Smoking',
-        'description': 'Indicates whether you smoke. Smoking damages blood vessels and significantly increases the risk of heart disease and stroke.'
-    },
-
-    'alco': {
-        'name': 'Alcohol Consumption',
-        'description': 'Indicates whether you consume alcohol. Excessive alcohol intake can raise blood pressure and contribute to heart and liver diseases.'
-    },
-
-    'active': {
-        'name': 'Physical Activity',
-        'description': 'Indicates whether you engage in regular physical activity. Staying active helps maintain heart health, while inactivity increases the risk of cardiovascular problems.'
-    }
+# Chỉ giữ tên hiển thị — description đã được handle ở frontend
+FEATURE_DISPLAY_NAME = {
+    'age_years': 'Age',
+    'bmi': 'Body Mass Index (BMI)',
+    'map': 'Mean Arterial Pressure',
+    'pulse_pressure': 'Pulse Pressure',
+    'lifestyle_risk': 'Lifestyle Risk Score',
+    'hypertension_stage': 'Hypertension Stage',
+    'cholesterol_gluc_interaction': 'Cholesterol & Glucose Interaction',
+    'gender': 'Gender',
+    'cholesterol': 'Cholesterol Level',
+    'gluc': 'Blood Glucose Level',
+    'smoke': 'Smoking',
+    'alco': 'Alcohol Consumption',
+    'active': 'Physical Activity',
 }
 
 RISK_THRESHOLDS = {'low': 0.3, 'medium': 0.7}
@@ -143,15 +94,15 @@ class HealthData(BaseModel):
     @field_validator('height')
     @classmethod
     def validate_height(cls, v):
-        if not 100 <= v <= 250:
-            raise ValueError('Height must be between 100 and 250 cm')
+        if not 55 <= v <= 250:
+            raise ValueError('Height must be between 55 and 250 cm')
         return v
 
     @field_validator('weight')
     @classmethod
     def validate_weight(cls, v):
-        if not 30 <= v <= 200:
-            raise ValueError('Weight must be between 30 and 200 kg')
+        if not 10 <= v <= 200:
+            raise ValueError('Weight must be between 10 and 200 kg')
         return v
 
     @field_validator('ap_hi')
@@ -369,17 +320,12 @@ def predict_health(data: HealthData):
 
         # SHAP explanation
         shap_values = explainer.shap_values(features)
-        # Debug
-        print(f"type shap_values: {type(shap_values)}")
-        print(f"shap_values shape: {np.array(shap_values).shape}")
-        # Handle both single and multi-output SHAP values
-        shap_arr = shap_values[0, :, 1]  
+        shap_arr = shap_values[0, :, 1]
 
         top_idx = np.argsort(np.abs(shap_arr))[::-1][:3]
         top_factors = [
             {
-                "feature": FEATURE_DISPLAY_NAMES[FEATURE_NAMES[int(i)]]['name'],
-                "description": FEATURE_DISPLAY_NAMES[FEATURE_NAMES[int(i)]]['description'],
+                "feature": FEATURE_DISPLAY_NAME[FEATURE_NAMES[int(i)]],
                 "value": float(shap_arr[i])
             }
             for i in top_idx
@@ -397,7 +343,7 @@ def predict_health(data: HealthData):
         }
 
     except Exception as e:
-        print(traceback.format_exc())  
+        print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
 
 

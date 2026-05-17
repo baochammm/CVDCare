@@ -132,7 +132,7 @@ const AdminDashboard = () => {
                           {u.role}
                         </span>
                       </td>
-                      <td>{u.city}</td>
+                      <td>{u.city.formattedAddress || "Not specified"}</td>
                       <td>{new Date(u.createdAt).toLocaleDateString()}</td>
                       <td className="space-x-2">
                         <button
@@ -306,7 +306,7 @@ const AdminDashboard = () => {
                     <td>{new Date(req.createdAt).toLocaleString()}</td>
                     <td>
                       <button
-                        className="btn btn-xs btn-error"
+                        className="btn btn-error"
                         onClick={() => {
                           setRequestToDelete(req._id);
                           document.getElementById("delete_request_modal").showModal();
