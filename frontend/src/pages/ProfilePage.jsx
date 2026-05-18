@@ -1,15 +1,14 @@
-import { useEffect, useState, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getProfile, updateProfile, changePassword, deleteAccount } from "../lib/api";
+import { getErrorMessage } from "../lib/getErrorMessage";
 import { User, Lock, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 
 const ProfilePage = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
 
   const [profileForm, setProfileForm] = useState({
     displayName: "",
@@ -29,27 +28,55 @@ const ProfilePage = () => {
   });
 
   const [deletePassword, setDeletePassword] = useState("");
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
+  const { data: profile, isLoading: loading } = useQuery({
+    queryKey: ["profile"],
+    queryFn: async () => {
+      const res = await getProfile();
+      return res.data;
+    },
+  });
+
+  // Sync form state when profile data is loaded
   useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const res = await getProfile();
-        setProfile(res.data);
-        const addr = res.data.city?.formattedAddress || "";
-        setProfileForm({
-          displayName: res.data.displayName || res.data.userName,
-          city: res.data.city || { formattedAddress: "", lat: null, lng: null },
-        });
-        setLocationInput(addr);
-        if (addr) setLocationSelected(true);
-      } catch (err) {
-        toast.error("Failed to load profile");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProfile();
-  }, []);
+    if (!profile) return;
+    const addr = profile.city?.formattedAddress || "";
+    setProfileForm({
+      displayName: profile.displayName || profile.userName,
+      city: profile.city || { formattedAddress: "", lat: null, lng: null },
+    });
+    setLocationInput(addr);
+    if (addr) setLocationSelected(true);
+  }, [profile]);
+
+  const { mutate: saveProfile, isPending: savePending } = useMutation({
+    mutationFn: (data) => updateProfile(data),
+    onSuccess: () => {
+      toast.success("Profile updated successfully!");
+      queryClient.invalidateQueries({ queryKey: ["authUser"] });
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+    },
+    onError: (err) => toast.error(getErrorMessage(err)),
+  });
+
+  const { mutate: savePassword, isPending: passwordPending } = useMutation({
+    mutationFn: (data) => changePassword(data),
+    onSuccess: () => {
+      toast.success("Password changed successfully!");
+      setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    },
+    onError: (err) => toast.error(getErrorMessage(err)),
+  });
+
+  const { mutate: removeAccount, isPending: deletePending } = useMutation({
+    mutationFn: (data) => deleteAccount(data),
+    onSuccess: () => {
+      toast.success("Account deleted successfully!");
+      navigate("/login");
+    },
+    onError: (err) => toast.error(getErrorMessage(err)),
+  });
 
   const handleLocationInput = (value) => {
     setLocationInput(value);
@@ -62,7 +89,6 @@ const ProfilePage = () => {
     }
     debounceRef.current = setTimeout(async () => {
       try {
-        // Search only for cities
         const res = await fetch(
           `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(value)}&format=json&limit=5&featuretype=city&addressdetails=1`,
           { headers: { "Accept-Language": "en" } }
@@ -77,7 +103,6 @@ const ProfilePage = () => {
   };
 
   const handleSelectSuggestion = (item) => {
-    // Only keep city + country (e.g. "Ho Chi Minh City, Vietnam")
     const addr = item.address;
     const city = addr?.city || addr?.town || addr?.municipality || addr?.county || item.display_name.split(",")[0].trim();
     const country = addr?.country || "";
@@ -97,28 +122,20 @@ const ProfilePage = () => {
     }));
   };
 
-  const handleUpdateProfile = async () => {
+  const handleUpdateProfile = () => {
     if (locationInput && !locationSelected) {
       toast.error("Please select a city from the suggestions");
       return;
     }
-    try {
-      await updateProfile({
-        displayName: profileForm.displayName,
-        city: locationSelected
-          ? profileForm.city
-          : { formattedAddress: "", lat: null, lng: null },
-      });
-      toast.success("Profile updated successfully!");
-      await queryClient.invalidateQueries({ queryKey: ["authUser"] });
-      const res = await getProfile();
-      setProfile(res.data);
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to update profile");
-    }
+    saveProfile({
+      displayName: profileForm.displayName,
+      city: locationSelected
+        ? profileForm.city
+        : { formattedAddress: "", lat: null, lng: null },
+    });
   };
 
-  const handleChangePassword = async () => {
+  const handleChangePassword = () => {
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
       toast.error("New passwords do not match");
       return;
@@ -127,26 +144,18 @@ const ProfilePage = () => {
       toast.error("New password must be at least 6 characters");
       return;
     }
-    try {
-      await changePassword({
-        currentPassword: passwordForm.currentPassword,
-        newPassword: passwordForm.newPassword,
-      });
-      toast.success("Password changed successfully!");
-      setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to change password");
-    }
+    savePassword({
+      currentPassword: passwordForm.currentPassword,
+      newPassword: passwordForm.newPassword,
+    });
   };
 
-  const handleDeleteAccount = async () => {
-    try {
-      await deleteAccount({ password: deletePassword });
-      toast.success("Account deleted successfully!");
-      navigate("/login");
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to delete account");
+  const handleDeleteAccount = () => {
+    if (!deletePassword) {
+      toast.error("Please enter your password to confirm");
+      return;
     }
+    removeAccount({ password: deletePassword });
   };
 
   if (loading) {
@@ -176,11 +185,13 @@ const ProfilePage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div className="form-control">
                 <label className="label"><span className="label-text font-semibold">Username</span></label>
-                <input type="text" className="input input-bordered w-full bg-base-200" value={profile?.userName || ""} disabled />
+                <input type="text" className="input input-bordered w-full bg-base-200"
+                  value={profile?.userName || ""} disabled />
               </div>
               <div className="form-control">
                 <label className="label"><span className="label-text font-semibold">Email</span></label>
-                <input type="text" className="input input-bordered w-full bg-base-200" value={profile?.email || ""} disabled />
+                <input type="text" className="input input-bordered w-full bg-base-200"
+                  value={profile?.email || ""} disabled />
               </div>
             </div>
 
@@ -196,7 +207,7 @@ const ProfilePage = () => {
                 />
               </div>
 
-              {/* City with Nominatim autocomplete */}
+              {/* City autocomplete */}
               <div className="form-control relative">
                 <label className="label">
                   <span className="label-text font-semibold">City</span>
@@ -240,7 +251,7 @@ const ProfilePage = () => {
                       setSuggestions([]);
                       setProfileForm((prev) => ({
                         ...prev,
-                        location: { formattedAddress: "", lat: null, lng: null },
+                        city: { formattedAddress: "", lat: null, lng: null },
                       }));
                     }}
                   >
@@ -251,8 +262,14 @@ const ProfilePage = () => {
             </div>
 
             <div className="mt-4">
-              <button className="btn btn-primary w-full" onClick={handleUpdateProfile}>
-                Save Changes
+              <button
+                className="btn btn-primary w-full"
+                onClick={handleUpdateProfile}
+                disabled={savePending}
+              >
+                {savePending ? (
+                  <><span className="loading loading-spinner loading-xs"></span> Saving...</>
+                ) : "Save Changes"}
               </button>
             </div>
           </div>
@@ -268,22 +285,33 @@ const ProfilePage = () => {
             <div className="space-y-4">
               <div className="form-control">
                 <label className="label"><span className="label-text font-semibold">Current Password</span></label>
-                <input type="password" className="input input-bordered w-full" value={passwordForm.currentPassword}
+                <input type="password" className="input input-bordered w-full"
+                  value={passwordForm.currentPassword}
                   onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })} />
               </div>
               <div className="form-control">
                 <label className="label"><span className="label-text font-semibold">New Password</span></label>
-                <input type="password" className="input input-bordered w-full" value={passwordForm.newPassword}
+                <input type="password" className="input input-bordered w-full"
+                  value={passwordForm.newPassword}
                   onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })} />
               </div>
               <div className="form-control">
                 <label className="label"><span className="label-text font-semibold">Confirm New Password</span></label>
-                <input type="password" className="input input-bordered w-full" value={passwordForm.confirmPassword}
+                <input type="password" className="input input-bordered w-full"
+                  value={passwordForm.confirmPassword}
                   onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })} />
               </div>
             </div>
             <div className="mt-4">
-              <button className="btn btn-primary w-full" onClick={handleChangePassword}>Change Password</button>
+              <button
+                className="btn btn-primary w-full"
+                onClick={handleChangePassword}
+                disabled={passwordPending}
+              >
+                {passwordPending ? (
+                  <><span className="loading loading-spinner loading-xs"></span> Saving...</>
+                ) : "Change Password"}
+              </button>
             </div>
           </div>
         </div>
@@ -300,27 +328,43 @@ const ProfilePage = () => {
             </p>
             <div className="form-control mb-4">
               <label className="label"><span className="label-text font-semibold">Enter your password to confirm</span></label>
-              <input type="password" className="input input-bordered w-full" value={deletePassword}
+              <input type="password" className="input input-bordered w-full"
+                value={deletePassword}
                 onChange={(e) => setDeletePassword(e.target.value)} />
             </div>
-            <button className="btn btn-error w-full"
-              onClick={() => document.getElementById("delete_account_modal").showModal()}>
+            <button
+              className="btn btn-error w-full"
+              onClick={() => setShowDeleteModal(true)}
+            >
               Delete My Account
             </button>
           </div>
         </div>
       </div>
 
-      <dialog id="delete_account_modal" className="modal">
-        <div className="modal-box">
-          <h3 className="font-bold text-lg text-error">Delete Account?</h3>
-          <p className="py-4">This will permanently delete your account and all prediction history. This action cannot be undone.</p>
-          <div className="modal-action">
-            <form method="dialog"><button className="btn">Cancel</button></form>
-            <button className="btn btn-error" onClick={handleDeleteAccount}>Delete</button>
+      {/* DELETE ACCOUNT MODAL */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+          <div className="modal-box">
+            <h3 className="font-bold text-lg text-error">Delete Account?</h3>
+            <p className="py-4">
+              This will permanently delete your account and all prediction history. This action cannot be undone.
+            </p>
+            <div className="modal-action">
+              <button className="btn" onClick={() => setShowDeleteModal(false)}>Cancel</button>
+              <button
+                className="btn btn-error"
+                onClick={handleDeleteAccount}
+                disabled={deletePending}
+              >
+                {deletePending ? (
+                  <><span className="loading loading-spinner loading-xs"></span> Deleting...</>
+                ) : "Delete"}
+              </button>
+            </div>
           </div>
         </div>
-      </dialog>
+      )}
     </div>
   );
 };

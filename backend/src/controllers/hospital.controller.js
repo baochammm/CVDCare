@@ -41,7 +41,7 @@ const EXCLUDE_SPECIALITIES = [
 ];
 
 // Tiếng Việt only — safety net cho OSM data VN còn thưa tag speciality
-// Tiếng Anh đã được cover bởi EXCLUDE_SPECIALITIES ở trên
+// Tiếng Anh đã được cover bởi EXCLUDE_SPECIALITIES
 const NAME_BLACKLIST_VI = [
   "chỉnh hình",
   "chấn thương",
@@ -92,7 +92,7 @@ export const getNearbyHospitals = async (req, res) => {
   try {
     const apiKey = process.env.GEOAPIFY_API_KEY;
 
-    // Bước 1: Lấy place_id của thành phố từ tọa độ
+    // Lấy place_id của thành phố từ tọa độ
     const reverseUrl = `https://api.geoapify.com/v1/geocode/reverse?lat=${lat}&lon=${lng}&apiKey=${apiKey}`;
     const reverseRes = await fetch(reverseUrl);
     const reverseData = await reverseRes.json();
@@ -101,7 +101,7 @@ export const getNearbyHospitals = async (req, res) => {
       cityFeature?.properties?.city_place_id ||
       cityFeature?.properties?.place_id;
 
-    // Bước 2: Build filter — dùng boundary thành phố nếu có, fallback về 50km
+    // Build filter — dùng boundary thành phố nếu có, fallback về 50km
     const filter = cityPlaceId
       ? `place:${cityPlaceId}`
       : `circle:${lng},${lat},50000`;
@@ -138,23 +138,23 @@ export const getNearbyHospitals = async (req, res) => {
       .filter((h) => {
         const nameLower = h.name.toLowerCase();
 
-        // Bước 1: Blacklist tiếng Việt — loại bệnh viện chuyên khoa không liên quan CVD
+        // Blacklist tiếng Việt — loại bệnh viện chuyên khoa không liên quan CVD
         // Safety net cho OSM data VN thiếu speciality tag
         if (NAME_BLACKLIST_VI.some((kw) => nameLower.includes(kw)))
           return false;
 
-        // Bước 2: Không có speciality tag → đa khoa, giữ lại
+        // Không có speciality tag -> đa khoa, giữ lại
         if (h.specialities.length === 0) return true;
 
-        // Bước 3: Có ít nhất 1 speciality liên quan CVD → giữ lại
+        // Có ít nhất 1 speciality liên quan CVD -> giữ lại
         if (h.specialities.some((s) => INCLUDE_SPECIALITIES.includes(s)))
           return true;
 
-        // Bước 4: Toàn bộ speciality đều bị loại trừ → bỏ
+        // Toàn bộ speciality đều bị loại trừ -> bỏ
         if (h.specialities.every((s) => EXCLUDE_SPECIALITIES.includes(s)))
           return false;
 
-        // Bước 5: Còn lại → giữ
+        // Bước 5: Còn lại -> giữ
         return true;
       })
       .sort((a, b) => a.dist - b.dist);

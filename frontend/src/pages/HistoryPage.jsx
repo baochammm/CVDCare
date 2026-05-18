@@ -1,67 +1,60 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { History } from "lucide-react";
 import { getMyHistory, deleteHealthData, updateHealthData } from "../lib/api";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getErrorMessage } from "../lib/getErrorMessage";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import toast from "react-hot-toast";
 
 const HistoryPage = () => {
-  const [history, setHistory] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
   const [recordToDelete, setRecordToDelete] = useState(null);
   const [recordToEdit, setRecordToEdit] = useState(null);
   const [editForm, setEditForm] = useState({});
 
-  useEffect(() => {
-    fetchHistory();
-  }, []);
+  const queryClient = useQueryClient();
 
-  const fetchHistory = async () => {
-    try {
-      setLoading(true);
+  const { data: history = [], isLoading: loading, isError, error } = useQuery({
+    queryKey: ["history"],
+    queryFn: async () => {
       const res = await getMyHistory();
-      setHistory(res.data);
-    } catch (err) {
-      console.error(err);
-      setError(err.response?.data?.message || "Failed to fetch history");
-    } finally {
-      setLoading(false);
-    }
-  };
+      return res.data;
+    },
+  });
 
-  const handleDeleteRecord = async () => {
-    try {
-      await deleteHealthData(recordToDelete);
-      setHistory((prev) => prev.filter((item) => item._id !== recordToDelete));
-      setRecordToDelete(null);
-      document.getElementById("delete_record_modal").close();
+  const { mutate: removeRecord } = useMutation({
+    mutationFn: deleteHealthData,
+    onSuccess: () => {
       toast.success("Record deleted successfully!");
-    } catch (err) {
-      toast.error("Failed to delete record");
-    }
-  };
+      setRecordToDelete(null);
+      queryClient.invalidateQueries({ queryKey: ["history"] });
+    },
+    onError: (err) => toast.error(getErrorMessage(err)),
+  });
 
-  const handleEditRecord = async () => {
-    try {
-      if (!editForm.age || !editForm.height || !editForm.weight || !editForm.ap_hi || !editForm.ap_lo || !editForm.cholesterol || !editForm.gluc || editForm.smoke === undefined || editForm.alco === undefined || editForm.active === undefined) {
-        toast.error("Please fill in all required fields!");
-        return;
-      }
-      await updateHealthData(recordToEdit._id, editForm);
-      document.getElementById("edit_record_modal").close();
+  const { mutate: editRecord } = useMutation({
+    mutationFn: ({ id, form }) => updateHealthData(id, form),
+    onSuccess: () => {
       toast.success("Health data updated successfully!");
-      fetchHistory();
       setRecordToEdit(null);
       setEditForm({});
-    } catch (err) {
-      toast.error(`Cannot update: ${err.response?.data?.message || err.message}`);
+      queryClient.invalidateQueries({ queryKey: ["history"] });
+    },
+    onError: (err) => {
+      toast.error(getErrorMessage(err));
+    },
+  });
+
+  const handleEditRecord = () => {
+    if (!editForm.age || !editForm.height || !editForm.weight || !editForm.ap_hi || !editForm.ap_lo || !editForm.cholesterol || !editForm.gluc || editForm.smoke === undefined || editForm.alco === undefined || editForm.active === undefined) {
+      toast.error("Please fill in all required fields!");
+      return;
     }
+    editRecord({ id: recordToEdit._id, form: editForm });
   };
 
   const chartData = history.map(item => ({
     date: new Date(item.updatedAt).getTime(),
-    risk_score: item.risk_score * 100
+    risk_score: item.risk_score * 100,
   }));
 
   const formatRiskLevel = (riskLevel) => {
@@ -72,7 +65,7 @@ const HistoryPage = () => {
   return (
     <div className="h-screen flex flex-col items-center justify-start p-4 sm:p-6 md:p-8">
       <div className="border border-primary/25 w-full max-w-6xl mx-auto bg-base-100 rounded-xl shadow-lg overflow-auto">
-        
+
         {/* HEADER */}
         <div className="flex items-center gap-2 p-6 border-b border-primary/25">
           <History className="size-9 text-primary" />
@@ -82,9 +75,9 @@ const HistoryPage = () => {
         </div>
 
         {/* ERROR */}
-        {error && (
+        {isError && (
           <div className="alert alert-error m-6">
-            <span>{error}</span>
+            <span>{getErrorMessage(error)}</span>
           </div>
         )}
 
@@ -137,17 +130,13 @@ const HistoryPage = () => {
                               alco: item.alco,
                               active: item.active,
                             });
-                            document.getElementById("edit_record_modal").showModal();
                           }}
                         >
                           Edit
                         </button>
                         <button
                           className="btn btn-xs btn-error"
-                          onClick={() => {
-                            setRecordToDelete(item._id);
-                            document.getElementById("delete_record_modal").showModal();
-                          }}
+                          onClick={() => setRecordToDelete(item._id)}
                         >
                           Delete
                         </button>
@@ -199,148 +188,152 @@ const HistoryPage = () => {
       </div>
 
       {/* DELETE CONFIRM MODAL */}
-      <dialog id="delete_record_modal" className="modal">
-        <div className="modal-box">
-          <h3 className="font-bold text-lg">Delete Record?</h3>
-          <p className="py-4">This record will be deleted from your history. You can submit a Support Request to restore it if needed.</p>
-          <div className="modal-action">
-            <form method="dialog">
-              <button className="btn">Cancel</button>
-            </form>
-            <button className="btn btn-error" onClick={handleDeleteRecord}>
-              Delete
-            </button>
+      {recordToDelete && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+          <div className="modal-box">
+            <h3 className="font-bold text-lg">Delete Record?</h3>
+            <p className="py-4">
+              This record will be deleted from your history. You can submit a Support Request to restore it if needed.
+            </p>
+            <div className="modal-action">
+              <button className="btn" onClick={() => setRecordToDelete(null)}>
+                Cancel
+              </button>
+              <button className="btn btn-error" onClick={() => removeRecord(recordToDelete)}>
+                Delete
+              </button>
+            </div>
           </div>
         </div>
-      </dialog>
+      )}
 
       {/* EDIT MODAL */}
-      <dialog id="edit_record_modal" className="modal">
-        <div className="modal-box max-w-4xl">
-          <h3 className="font-bold text-lg mb-6 border-b pb-2">Edit Health Record</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            
-            <div className="form-control">
-              <label className="label"><span className="label-text font-semibold">Age</span></label>
-              <input type="number" className="input input-bordered w-full"
-                value={editForm.age ?? ""}
-                onChange={(e) => setEditForm({ ...editForm, age: Number(e.target.value) })}
-              />
+      {recordToEdit && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+          <div className="modal-box max-w-4xl">
+            <h3 className="font-bold text-lg mb-6 border-b pb-2">Edit Health Record</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+              <div className="form-control">
+                <label className="label"><span className="label-text font-semibold">Age</span></label>
+                <input type="number" className="input input-bordered w-full"
+                  value={editForm.age ?? ""}
+                  onChange={(e) => setEditForm({ ...editForm, age: Number(e.target.value) })}
+                />
+              </div>
+
+              <div className="form-control">
+                <label className="label"><span className="label-text font-semibold">Gender</span></label>
+                <select className="select select-bordered w-full"
+                  value={editForm.gender || "male"}
+                  onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })}
+                >
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                </select>
+              </div>
+
+              <div className="form-control">
+                <label className="label"><span className="label-text font-semibold">Height (cm)</span></label>
+                <input type="number" className="input input-bordered w-full"
+                  value={editForm.height ?? ""}
+                  onChange={(e) => setEditForm({ ...editForm, height: Number(e.target.value) })}
+                />
+              </div>
+
+              <div className="form-control">
+                <label className="label"><span className="label-text font-semibold">Weight (kg)</span></label>
+                <input type="number" className="input input-bordered w-full"
+                  value={editForm.weight ?? ""}
+                  onChange={(e) => setEditForm({ ...editForm, weight: Number(e.target.value) })}
+                />
+              </div>
+
+              <div className="form-control">
+                <label className="label"><span className="label-text font-semibold">Systolic BP (mmHg)</span></label>
+                <input type="number" className="input input-bordered w-full"
+                  value={editForm.ap_hi ?? ""}
+                  onChange={(e) => setEditForm({ ...editForm, ap_hi: Number(e.target.value) })}
+                />
+              </div>
+
+              <div className="form-control">
+                <label className="label"><span className="label-text font-semibold">Diastolic BP (mmHg)</span></label>
+                <input type="number" className="input input-bordered w-full"
+                  value={editForm.ap_lo ?? ""}
+                  onChange={(e) => setEditForm({ ...editForm, ap_lo: Number(e.target.value) })}
+                />
+              </div>
+
+              <div className="form-control">
+                <label className="label"><span className="label-text font-semibold">Cholesterol</span></label>
+                <select className="select select-bordered w-full"
+                  value={editForm.cholesterol || 1}
+                  onChange={(e) => setEditForm({ ...editForm, cholesterol: Number(e.target.value) })}
+                >
+                  <option value={1}>Normal</option>
+                  <option value={2}>Above Normal</option>
+                  <option value={3}>Well Above Normal</option>
+                </select>
+              </div>
+
+              <div className="form-control">
+                <label className="label"><span className="label-text font-semibold">Glucose</span></label>
+                <select className="select select-bordered w-full"
+                  value={editForm.gluc || 1}
+                  onChange={(e) => setEditForm({ ...editForm, gluc: Number(e.target.value) })}
+                >
+                  <option value={1}>Normal</option>
+                  <option value={2}>Above Normal</option>
+                  <option value={3}>Well Above Normal</option>
+                </select>
+              </div>
+
+              <div className="form-control">
+                <label className="label"><span className="label-text font-semibold">Smoking</span></label>
+                <select className="select select-bordered w-full"
+                  value={String(editForm.smoke)}
+                  onChange={(e) => setEditForm({ ...editForm, smoke: e.target.value === "true" })}
+                >
+                  <option value="false">No</option>
+                  <option value="true">Yes</option>
+                </select>
+              </div>
+
+              <div className="form-control">
+                <label className="label"><span className="label-text font-semibold">Alcohol Consumption</span></label>
+                <select className="select select-bordered w-full"
+                  value={String(editForm.alco)}
+                  onChange={(e) => setEditForm({ ...editForm, alco: e.target.value === "true" })}
+                >
+                  <option value="false">No</option>
+                  <option value="true">Yes</option>
+                </select>
+              </div>
+
+              <div className="form-control">
+                <label className="label"><span className="label-text font-semibold">Physical Activity</span></label>
+                <select className="select select-bordered w-full"
+                  value={String(editForm.active)}
+                  onChange={(e) => setEditForm({ ...editForm, active: e.target.value === "true" })}
+                >
+                  <option value="false">No</option>
+                  <option value="true">Yes</option>
+                </select>
+              </div>
             </div>
 
-            <div className="form-control">
-              <label className="label"><span className="label-text font-semibold">Gender</span></label>
-              <select className="select select-bordered w-full"
-                value={editForm.gender || "male"}
-                onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })}
-              >
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-              </select>
+            <div className="modal-action mt-8">
+              <button className="btn btn-ghost" onClick={() => { setRecordToEdit(null); setEditForm({}); }}>
+                Cancel
+              </button>
+              <button className="btn btn-primary px-10" onClick={handleEditRecord}>
+                Save & Predict Again
+              </button>
             </div>
-
-            <div className="form-control">
-              <label className="label"><span className="label-text font-semibold">Height (cm)</span></label>
-              <input type="number" className="input input-bordered w-full"
-                value={editForm.height ?? ""}
-                onChange={(e) => setEditForm({ ...editForm, height: Number(e.target.value) })}
-              />
-            </div>
-
-            <div className="form-control">
-              <label className="label"><span className="label-text font-semibold">Weight (kg)</span></label>
-              <input type="number" className="input input-bordered w-full"
-                value={editForm.weight ?? ""}
-                onChange={(e) => setEditForm({ ...editForm, weight: Number(e.target.value) })}
-              />
-            </div>
-
-            <div className="form-control">
-              <label className="label"><span className="label-text font-semibold">Systolic BP (mmHg)</span></label>
-              <input type="number" className="input input-bordered w-full"
-                value={editForm.ap_hi ?? ""}
-                onChange={(e) => setEditForm({ ...editForm, ap_hi: Number(e.target.value) })}
-              />
-            </div>
-
-            <div className="form-control">
-              <label className="label"><span className="label-text font-semibold">Diastolic BP (mmHg)</span></label>
-              <input type="number" className="input input-bordered w-full"
-                value={editForm.ap_lo ?? ""}
-                onChange={(e) => setEditForm({ ...editForm, ap_lo: Number(e.target.value) })}
-              />
-            </div>
-
-            <div className="form-control">
-              <label className="label"><span className="label-text font-semibold">Cholesterol</span></label>
-              <select className="select select-bordered w-full"
-                value={editForm.cholesterol || 1}
-                onChange={(e) => setEditForm({ ...editForm, cholesterol: Number(e.target.value) })}
-              >
-                <option value={1}>Normal</option>
-                <option value={2}>Above Normal</option>
-                <option value={3}>Well Above Normal</option>
-              </select>
-            </div>
-
-            <div className="form-control">
-              <label className="label"><span className="label-text font-semibold">Glucose</span></label>
-              <select className="select select-bordered w-full"
-                value={editForm.gluc || 1}
-                onChange={(e) => setEditForm({ ...editForm, gluc: Number(e.target.value) })}
-              >
-                <option value={1}>Normal</option>
-                <option value={2}>Above Normal</option>
-                <option value={3}>Well Above Normal</option>
-              </select>
-            </div>
-
-            <div className="form-control">
-              <label className="label"><span className="label-text font-semibold">Smoking</span></label>
-              <select className="select select-bordered w-full"
-                value={String(editForm.smoke)}
-                onChange={(e) => setEditForm({ ...editForm, smoke: e.target.value === "true" })}
-              >
-                <option value="false">No</option>
-                <option value="true">Yes</option>
-              </select>
-            </div>
-
-            <div className="form-control">
-              <label className="label"><span className="label-text font-semibold">Alcohol Consumption</span></label>
-              <select className="select select-bordered w-full"
-                value={String(editForm.alco)}
-                onChange={(e) => setEditForm({ ...editForm, alco: e.target.value === "true" })}
-              >
-                <option value="false">No</option>
-                <option value="true">Yes</option>
-              </select>
-            </div>
-
-            <div className="form-control">
-              <label className="label"><span className="label-text font-semibold">Physical Activity</span></label>
-              <select className="select select-bordered w-full"
-                value={String(editForm.active)}
-                onChange={(e) => setEditForm({ ...editForm, active: e.target.value === "true" })}
-              >
-                <option value="false">No</option>
-                <option value="true">Yes</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="modal-action mt-8">
-            <button type="button" className="btn btn-ghost"
-              onClick={() => document.getElementById("edit_record_modal").close()}
-            >
-              Cancel
-            </button>
-            <button type="button" className="btn btn-primary px-10" onClick={handleEditRecord}>
-              Save & Predict Again
-            </button>
           </div>
         </div>
-      </dialog>
+      )}
     </div>
   );
 };

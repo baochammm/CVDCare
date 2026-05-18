@@ -1,46 +1,43 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Headphones } from "lucide-react";
 import { createRequest, getMyRequests, deleteRequest } from "../lib/api";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getErrorMessage } from "../lib/getErrorMessage";
 import toast from "react-hot-toast";
 
 const SupportRequestPage = () => {
   const [message, setMessage] = useState("");
-  const [requests, setRequests] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [requestToDelete, setRequestToDelete] = useState(null);
 
-  useEffect(() => {
-    fetchRequests();
-  }, []);
+  const queryClient = useQueryClient();
 
-    const fetchRequests = async () => {
-    try {
-        setLoading(true);
-        const { data } = await getMyRequests();
-        setRequests(data);
-    } catch (err) {
-        console.error(err);
-        setError(err.response?.data?.message || "Failed to fetch support requests");
-    } finally {
-        setLoading(false);
-    }
-    };
+  const { data: requests = [], isLoading: loading, isError, error } = useQuery({
+    queryKey: ["myRequests"],
+    queryFn: async () => {
+      const { data } = await getMyRequests();
+      return data;
+    },
+  });
 
-    const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!message.trim()) return;
-    try {
-        await createRequest(message);
-        toast.success("Support request sent successfully!");
-        setMessage("");
-        fetchRequests();
-    } catch (err) {
-        console.error(err);
-        setError(err.response?.data?.message || "Failed to send request");
-        toast.error("Failed to send support request. Please try again.");
-    }
-    };
+  const { mutate: submitRequest } = useMutation({
+    mutationFn: () => createRequest(message),
+    onSuccess: () => {
+      toast.success("Support request sent successfully!");
+      setMessage("");
+      queryClient.invalidateQueries({ queryKey: ["myRequests"] });
+    },
+    onError: (err) => toast.error(getErrorMessage(err)),
+  });
+
+  const { mutate: removeRequest } = useMutation({
+    mutationFn: deleteRequest,
+    onSuccess: () => {
+      toast.success("Request deleted successfully!");
+      setRequestToDelete(null);
+      queryClient.invalidateQueries({ queryKey: ["myRequests"] });
+    },
+    onError: (err) => toast.error(getErrorMessage(err)),
+  });
 
   const formatStatus = (status) => {
     if (!status) return "Unknown";
@@ -48,26 +45,13 @@ const SupportRequestPage = () => {
   };
 
   const getStatusClass = (status) => {
-    if (status === "done") return "badge badge-success";
+    if (status === "processed") return "badge badge-success";
     if (status === "processing") return "badge badge-warning";
-    if (status === "closed") return "badge badge-ghost";
-    return "badge badge-info";
-  };
-
-  const handleDeleteRequest = async () => {
-    try {
-      await deleteRequest(requestToDelete);
-      toast.success("Request deleted successfully!");
-      setRequestToDelete(null);
-      document.getElementById("delete_request_modal").close();
-      fetchRequests();
-    } catch (err) {
-      toast.error("Failed to delete request");
-    }
+    return "badge badge-ghost";
   };
 
   return (
-    <div className="h-screen flex flex-col items-center justify-start p-4 sm:p-6 md:p-8" data-theme="corporate">
+    <div className="h-screen flex flex-col items-center justify-start p-4 sm:p-6 md:p-8">
       <div className="border border-primary/25 w-full max-w-6xl mx-auto bg-base-100 rounded-xl shadow-lg overflow-auto">
 
         {/* HEADER */}
@@ -82,15 +66,15 @@ const SupportRequestPage = () => {
         </div>
 
         {/* ERROR */}
-        {error && (
+        {isError && (
           <div className="alert alert-error m-6">
-            <span>{error}</span>
+            <span>{getErrorMessage(error)}</span>
           </div>
         )}
 
         {/* FORM */}
         <div className="p-6 border-b border-primary/25">
-          <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3">
             <textarea
               className="textarea textarea-bordered w-full h-28 resize-none text-sm"
               placeholder="Enter your support request..."
@@ -99,14 +83,14 @@ const SupportRequestPage = () => {
             />
             <div className="flex justify-end">
               <button
-                type="submit"
                 className="btn btn-primary btn-sm"
                 disabled={!message.trim()}
+                onClick={() => submitRequest()}
               >
                 Send
               </button>
             </div>
-          </form>
+          </div>
         </div>
 
         {/* LIST */}
@@ -143,10 +127,7 @@ const SupportRequestPage = () => {
                       <td>
                         <button
                           className="btn btn-sm btn-error"
-                            onClick={() => {
-                            setRequestToDelete(req._id);
-                            document.getElementById("delete_request_modal").showModal();
-                          }}
+                          onClick={() => setRequestToDelete(req._id)}
                         >
                           Delete
                         </button>
@@ -158,23 +139,25 @@ const SupportRequestPage = () => {
             )}
           </div>
         )}
-
       </div>
-        {/* DELETE CONFIRMATION MODAL */}
-      <dialog id="delete_request_modal" className="modal">
-        <div className="modal-box">
-          <h3 className="font-bold text-lg">Delete Request?</h3>
-          <p className="py-4">This will permanently delete this support request.</p>
-          <div className="modal-action">
-            <form method="dialog">
-              <button className="btn">Cancel</button>
-            </form>
-            <button className="btn btn-error" onClick={handleDeleteRequest}>
-              Delete
-            </button>
+
+      {/* DELETE CONFIRMATION MODAL */}
+      {requestToDelete && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+          <div className="modal-box">
+            <h3 className="font-bold text-lg">Delete Request?</h3>
+            <p className="py-4">This will permanently delete this support request.</p>
+            <div className="modal-action">
+              <button className="btn" onClick={() => setRequestToDelete(null)}>
+                Cancel
+              </button>
+              <button className="btn btn-error" onClick={() => removeRequest(requestToDelete)}>
+                Delete
+              </button>
+            </div>
           </div>
         </div>
-      </dialog>
+      )}
     </div>
   );
 };

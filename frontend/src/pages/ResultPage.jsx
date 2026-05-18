@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
+import { useQuery } from "@tanstack/react-query";
 import { predictHealth, getLatestPrediction, getProfile, getNearbyHospitals } from "../lib/api";
+import { getErrorMessage } from "../lib/getErrorMessage";
+import { useState } from "react";
+import toast from "react-hot-toast";
 
-// Mirror of FEATURE_DISPLAY_NAMES từ backend — dùng để hiển thị description khi API không trả về
 const FEATURE_DESCRIPTIONS = {
   "Age": "Your age in years. The risk of cardiovascular diseases generally increases as you get older.",
   "Body Mass Index (BMI)": "A measure of body fat based on your height and weight. Higher BMI may indicate overweight or obesity, which can increase the risk of heart disease and other health problems.",
@@ -24,68 +26,58 @@ const ResultPage = () => {
   const navigate = useNavigate();
   const inputData = location.state;
 
-  const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [noData, setNoData] = useState(false);
-  const [showFactors, setShowFactors] = useState(false);
-  const [showRecommendations, setShowRecommendations] = useState(false);
-  const [isLatest, setIsLatest] = useState(false);
+  const [activeModal, setActiveModal] = useState(null); // null | "factors" | "recommendations" | "hospitals"
   const [activeTooltip, setActiveTooltip] = useState(null);
 
-  const [showHospitals, setShowHospitals] = useState(false);
   const [hospitals, setHospitals] = useState([]);
   const [hospitalLoading, setHospitalLoading] = useState(false);
   const [hospitalError, setHospitalError] = useState(null);
   const [userCity, setUserCity] = useState("");
 
-  useEffect(() => {
-    if (!inputData) {
-      fetchLatestPrediction();
-      return;
-    }
-    fetchPrediction();
-  }, [inputData]);
-
-  const fetchPrediction = async () => {
-    try {
-      setLoading(true);
+  const {
+    data: newResult,
+    isLoading: predictLoading,
+    isError: predictIsError,
+    error: predictError,
+  } = useQuery({
+    queryKey: ["prediction", inputData],
+    queryFn: async () => {
       const res = await predictHealth(inputData);
-      setResult(res.data.predictionResult);
-    } catch (err) {
-      console.error("Prediction error:", err);
-      setError("Unable to fetch prediction. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
+      return res.data.predictionResult;
+    },
+    enabled: !!inputData,
+  });
 
-  const fetchLatestPrediction = async () => {
-    try {
-      setLoading(true);
+  const {
+    data: latestResult,
+    isLoading: latestLoading,
+    isError: latestIsError,
+    error: latestError,
+  } = useQuery({
+    queryKey: ["latestPrediction"],
+    queryFn: async () => {
       const res = await getLatestPrediction();
-      if (res.data) {
-        setResult(res.data);
-        setIsLatest(true);
-      } else {
-        setNoData(true);
-      }
-    } catch (err) {
-      setNoData(true);
-    } finally {
-      setLoading(false);
-    }
-  };
+      return res.data ?? null;
+    },
+    enabled: !inputData,
+  });
+
+  const result = inputData ? newResult : latestResult;
+  const loading = inputData ? predictLoading : latestLoading;
+  const isError = inputData ? predictIsError : latestIsError;
+  const error = inputData ? predictError : latestError;
+  const noData = !inputData && !latestLoading && !latestResult;
+  const isLatest = !inputData && !!latestResult;
 
   const fetchNearbyHospitals = async () => {
-    setShowHospitals(true);
+    setActiveModal("hospitals");
     setHospitalLoading(true);
     setHospitalError(null);
     setHospitals([]);
 
     try {
       const profileRes = await getProfile();
-      const loc = profileRes.data?.location;
+      const loc = profileRes.data?.city;
 
       if (!loc?.lat || !loc?.lng) {
         setHospitalError("no_location");
@@ -94,14 +86,12 @@ const ResultPage = () => {
       }
 
       setUserCity(loc.formattedAddress || "your city");
-
       const res = await getNearbyHospitals(loc.lat, loc.lng);
       const results = res.data?.hospitals || [];
-
       setHospitals(results);
       if (results.length === 0) setHospitalError("no_results");
     } catch (err) {
-      console.error("Hospital fetch error:", err);
+      toast.error(getErrorMessage(err));
       setHospitalError("fetch_failed");
     } finally {
       setHospitalLoading(false);
@@ -122,38 +112,29 @@ const ResultPage = () => {
         <p style="font-size: 12px; color: #888; margin-bottom: 24px;">
           Generated on ${new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })}
         </p>
-
         <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
           <h2 style="font-size: 16px; font-weight: bold; margin-bottom: 8px; margin-top: 0;">Prediction Result</h2>
           <p style="font-size: 20px; font-weight: bold; margin-bottom: 4px;">${riskLevelTextPrint}</p>
           <p style="font-size: 14px; color: #555;">Risk Probability: ${(result.risk_score * 100).toFixed(2)}%</p>
         </div>
-
         <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
           <h2 style="font-size: 16px; font-weight: bold; margin-bottom: 8px; margin-top: 0;">Top 3 Key Factors</h2>
-          ${result.top_factors
-            .map(
-              (f, idx) => `
+          ${result.top_factors?.map((f, idx) => `
             <div style="margin-bottom: 10px;">
               <p style="font-weight: bold; margin-bottom: 2px;">${idx + 1}. ${f.feature}</p>
               <p style="font-size: 13px; color: #555;">${f.description || ""}</p>
             </div>
-          `
-            )
-            .join("")}
+          `).join("")}
         </div>
-
         <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
           <h2 style="font-size: 16px; font-weight: bold; margin-bottom: 8px; margin-top: 0;">Recommendations</h2>
           <ul style="padding-left: 16px; font-size: 13px; color: #444; line-height: 1.8;">
-            ${
-              result.recommendations?.length
-                ? result.recommendations.map((rec) => `<li>${rec}</li>`).join("")
-                : "<li>No recommendations available.</li>"
+            ${result.recommendations?.length
+              ? result.recommendations.map((rec) => `<li>${rec}</li>`).join("")
+              : "<li>No recommendations available.</li>"
             }
           </ul>
         </div>
-
         <div style="background: #f9fafb; border-radius: 8px; padding: 12px;">
           <p style="font-size: 11px; color: #888; line-height: 1.6; margin: 0;">
             Disclaimer: These results are estimates generated by an AI-based prediction model
@@ -165,16 +146,13 @@ const ResultPage = () => {
       </div>
     `;
 
-    // Tạo iframe ẩn, in từ đó — không mở tab mới, không ảnh hưởng current page
     const iframe = document.createElement("iframe");
     iframe.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;";
     document.body.appendChild(iframe);
-
     const doc = iframe.contentWindow.document;
     doc.open();
     doc.write(`<!DOCTYPE html><html><head><title>CVD Risk Prediction Result</title></head><body>${printContent}</body></html>`);
     doc.close();
-
     iframe.contentWindow.focus();
     setTimeout(() => {
       iframe.contentWindow.print();
@@ -183,6 +161,8 @@ const ResultPage = () => {
       }, 1000);
     }, 300);
   };
+
+  // --- Render states ---
 
   if (loading) {
     return (
@@ -205,10 +185,10 @@ const ResultPage = () => {
     );
   }
 
-  if (error) {
+  if (isError) {
     return (
       <div className="flex flex-col items-center justify-center h-screen text-center">
-        <p className="text-red-600 mb-4">{error}</p>
+        <p className="text-red-600 mb-4">{getErrorMessage(error)}</p>
         <button className="btn btn-primary" onClick={() => navigate("/predict")}>
           Try Again
         </button>
@@ -265,16 +245,16 @@ const ResultPage = () => {
 
           <button className="btn btn-primary w-full mb-2" onClick={() => navigate("/predict")}>Back to Prediction</button>
           <button className="btn btn-primary w-full mb-2" onClick={() => navigate("/history")}>Go to History</button>
-          <button className="btn btn-primary w-full mb-2" onClick={() => setShowFactors(true)}>View Key Factors</button>
-          <button className="btn btn-primary w-full mb-2" onClick={() => setShowRecommendations(true)}>View Recommendations</button>
+          <button className="btn btn-primary w-full mb-2" onClick={() => setActiveModal("factors")}>View Key Factors</button>
+          <button className="btn btn-primary w-full mb-2" onClick={() => setActiveModal("recommendations")}>View Recommendations</button>
           <button className="btn btn-primary w-full mb-2" onClick={fetchNearbyHospitals}>Find Local Hospitals</button>
           <button className="btn btn-primary w-full" onClick={handlePrint}>Print Results</button>
         </div>
       </div>
 
       {/* KEY FACTORS MODAL */}
-      {showFactors && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+      {activeModal === "factors" && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
           <div className="bg-white p-6 rounded-lg max-w-lg w-full text-center">
             <h3 className="text-4xl font-bold mb-4">Top 3 Factors</h3>
             <div className="flex flex-col gap-3 items-center font-medium">
@@ -300,7 +280,7 @@ const ResultPage = () => {
             <p className="text-sm text-gray-400 mt-4">Click on each factor to learn more</p>
             <button
               className="btn btn-primary mt-6"
-              onClick={() => { setShowFactors(false); setActiveTooltip(null); }}
+              onClick={() => { setActiveModal(null); setActiveTooltip(null); }}
             >
               Close
             </button>
@@ -309,8 +289,8 @@ const ResultPage = () => {
       )}
 
       {/* RECOMMENDATIONS MODAL */}
-      {showRecommendations && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+      {activeModal === "recommendations" && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
           <div className="bg-white p-6 rounded-lg max-w-lg w-full text-center">
             <h3 className="text-4xl font-bold mb-4">Recommendations</h3>
             <ul className="list-none max-h-64 overflow-y-auto text-left text-lg leading-relaxed space-y-2">
@@ -320,14 +300,14 @@ const ResultPage = () => {
                 <li>No recommendations available.</li>
               )}
             </ul>
-            <button className="btn btn-primary mt-4" onClick={() => setShowRecommendations(false)}>Close</button>
+            <button className="btn btn-primary mt-4" onClick={() => setActiveModal(null)}>Close</button>
           </div>
         </div>
       )}
 
-      {/* RECOMMENDED HOSPITALS MODAL */}
-      {showHospitals && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+      {/* HOSPITALS MODAL */}
+      {activeModal === "hospitals" && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
           <div className="bg-white p-6 rounded-lg max-w-lg w-full text-center">
             <h3 className="text-2xl font-bold mb-4">Recommended Hospitals</h3>
 
@@ -343,7 +323,7 @@ const ResultPage = () => {
                   Please update your city in Profile to see list of hospitals in your area.
                 </p>
                 <button className="btn btn-primary"
-                  onClick={() => { setShowHospitals(false); navigate("/profile"); }}>
+                  onClick={() => { setActiveModal(null); navigate("/profile"); }}>
                   Go to Profile
                 </button>
               </div>
@@ -362,12 +342,12 @@ const ResultPage = () => {
                 <p className="text-sm text-gray-400 mb-4 text-left">
                   Search area: <span className="font-medium text-gray-600">{userCity}</span>
                 </p>
-
                 <ul className="space-y-3 max-h-80 overflow-y-auto text-left">
                   {hospitals.map((h, idx) => (
                     <li key={idx} className="border border-gray-100 rounded-lg p-3">
                       <p className="font-semibold text-gray-800">{h.name}</p>
                       <p className="text-sm text-gray-500 mt-1">{h.address}</p>
+
                       <a
                         href={`https://www.google.com/maps/search/${encodeURIComponent(h.name)}/@${h.lat},${h.lng},17z`}
                         target="_blank"
@@ -382,7 +362,7 @@ const ResultPage = () => {
               </>
             )}
 
-            <button className="btn btn-primary mt-6 w-full" onClick={() => setShowHospitals(false)}>Close</button>
+            <button className="btn btn-primary mt-6 w-full" onClick={() => setActiveModal(null)}>Close</button>
           </div>
         </div>
       )}

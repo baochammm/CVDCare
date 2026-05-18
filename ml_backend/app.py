@@ -31,7 +31,7 @@ FEATURE_NAMES = [
     'lifestyle_risk', 'cholesterol_gluc_interaction', 'hypertension_stage'
 ]
 
-# Chỉ giữ tên hiển thị — description đã được handle ở frontend
+# Mapping tên feature sang tên hiển thị thân thiện hơn cho user
 FEATURE_DISPLAY_NAME = {
     'age_years': 'Age',
     'bmi': 'Body Mass Index (BMI)',
@@ -50,7 +50,7 @@ FEATURE_DISPLAY_NAME = {
 
 RISK_THRESHOLDS = {'low': 0.3, 'medium': 0.7}
 
-# Load model and clip bounds
+# Load model và clip bounds
 for path in [MODEL_PATH, CLIP_BOUNDS_PATH]:
     if not os.path.exists(path):
         raise FileNotFoundError(f"File not found: {path}")
@@ -63,7 +63,7 @@ except Exception as e:
     raise RuntimeError(f"Failed to load model or clip bounds: {e}")
 
 
-# Schema input with validation
+# Schema input với validation
 class HealthData(BaseModel):
     age: int
     gender: str
