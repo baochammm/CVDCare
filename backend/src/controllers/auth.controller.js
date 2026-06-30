@@ -40,12 +40,12 @@ export async function signup(req, res) {
     const token = jwt.sign(
       { userId: newUser._id },
       process.env.JWT_SECRET_KEY,
-      { expiresIn: "7d" }
+      { expiresIn: "1d" },
     );
 
     // set cookie
     res.cookie("jwt", token, {
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: 1 * 24 * 60 * 60 * 1000,
       httpOnly: true,
       sameSite: "strict",
       secure: process.env.NODE_ENV === "production",
@@ -81,19 +81,46 @@ export async function login(req, res) {
     }
 
     // Create JWT token
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET_KEY, {
-      expiresIn: "7d",
-    });
+    const token = jwt.sign(
+      { userId: user._id, role: user.role },
+      process.env.JWT_SECRET_KEY,
+      {
+        expiresIn: "1d",
+      },
+    );
 
     // Set cookie
     res.cookie("jwt", token, {
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: 1 * 24 * 60 * 60 * 1000,
       httpOnly: true,
-      sameSite: "strict",
+      sameSite: "strict", // Cross-Site Request Forgery protection, ensures cookie is only sent in requests from the same site
       secure: process.env.NODE_ENV === "production",
     });
 
-    res.status(200).json({ success: true, user });
+    // // test thử token 10s để dễ test refresh token
+    // const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET_KEY, {
+    //   expiresIn: "10s",
+    // });
+
+    // res.cookie("jwt", token, {
+    //   maxAge: 10 * 1000,
+    //   httpOnly: true,
+    //   sameSite: "strict",
+    //   secure: process.env.NODE_ENV === "production",
+    // });
+
+    res.status(200).json({
+      success: true,
+      user: {
+        _id: user._id,
+        userName: user.userName,
+        displayName: user.displayName,
+        email: user.email,
+        role: user.role,
+        city: user.city,
+        createdAt: user.createdAt,
+      },
+    });
   } catch (error) {
     console.log("Error in login controller:", error.message);
     res.status(500).json({ message: "Internal Server Error" });

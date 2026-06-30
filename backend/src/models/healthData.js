@@ -75,8 +75,9 @@ const healthDataSchema = new mongoose.Schema(
       type: [String], // optional
       default: [],
     },
+    isDeleted: { type: Boolean, default: false },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const HealthData = mongoose.model("HealthData", healthDataSchema);
