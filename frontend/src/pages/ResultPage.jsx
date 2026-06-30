@@ -46,6 +46,7 @@ const ResultPage = () => {
       return res.data.predictionResult;
     },
     enabled: !!inputData,
+    staleTime: Infinity,
   });
 
   const {
@@ -225,17 +226,17 @@ const ResultPage = () => {
 
           {riskLevel === "high risk" && (
             <p className="text-gray-600 mb-4">
-              You are at high risk of cardiovascular disease. Please consult a healthcare professional immediately.
+              Your inputs suggest a high risk profile. Please consult a healthcare professional immediately.
             </p>
           )}
           {riskLevel === "medium risk" && (
             <p className="text-gray-700 mb-4">
-              You are at medium risk of cardiovascular disease. Consider lifestyle changes and regular check-ups.
+              Your inputs suggest a medium risk profile. Consider lifestyle changes and regular check-ups.
             </p>
           )}
           {riskLevel === "low risk" && (
             <p className="text-gray-600 mb-4">
-              You are at low risk of cardiovascular disease. Keep maintaining a healthy lifestyle and regular check-ups.
+              Your inputs suggest a low risk profile. Keep maintaining a healthy lifestyle and regular check-ups.
             </p>
           )}
 

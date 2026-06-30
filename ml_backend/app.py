@@ -13,6 +13,7 @@ load_dotenv()
 
 app = FastAPI()
 
+# CORS configuration để cho phép frontend truy cập API từ domain được chỉ định trong .env
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[os.getenv("FRONTEND_URL")],
@@ -58,6 +59,7 @@ for path in [MODEL_PATH, CLIP_BOUNDS_PATH]:
 try:
     model = joblib.load(MODEL_PATH)
     clip_bounds = joblib.load(CLIP_BOUNDS_PATH)
+    # Initialize SHAP explanation với TreeExplainer (vì dùng Decision Tree)
     explainer = shap.TreeExplainer(model)
 except Exception as e:
     raise RuntimeError(f"Failed to load model or clip bounds: {e}")
@@ -77,6 +79,7 @@ class HealthData(BaseModel):
     alco: str
     active: str
 
+    # Validators cho từng field để đảm bảo dữ liệu đầu vào hợp lệ và trong phạm vi mong đợi
     @field_validator('age')
     @classmethod
     def validate_age(cls, v):
@@ -167,7 +170,7 @@ def get_hypertension_stage(ap_hi: int, ap_lo: int) -> int:
     else:
         return 0  # Normal
 
-
+# Dựa trên clip bounds đã tính toán từ training data, áp dụng clipping cho các feature numerical để tránh outliers ảnh hưởng đến prediction
 def apply_clip_bounds(features_dict: dict) -> dict:
     """Apply IQR clip bounds to numerical features"""
     clipped = features_dict.copy()
@@ -176,7 +179,7 @@ def apply_clip_bounds(features_dict: dict) -> dict:
             clipped[fname] = np.clip(clipped[fname], bounds['min'], bounds['max'])
     return clipped
 
-
+# Dựa trên risk score, phân loại thành low, medium, high risk để dễ hiểu cho người dùng
 def get_risk_level(risk_score: float) -> str:
     if risk_score < RISK_THRESHOLDS['low']:
         return "low risk"
@@ -185,7 +188,7 @@ def get_risk_level(risk_score: float) -> str:
     else:
         return "high risk"
 
-
+# Dựa trên tên feature, giá trị của feature và SHAP value, đưa ra khuyến nghị cụ thể cho người dùng
 def get_recommendation_for_feature(fname: str, val: float, shap_val: float) -> str:
     if fname == "map":
         if shap_val > 0:
@@ -314,14 +317,15 @@ def predict_health(data: HealthData):
         ]], columns=FEATURE_NAMES)
 
         # Predict
-        prediction = int(model.predict(features)[0])
-        risk_score = float(model.predict_proba(features)[0][1])
-        risk_level = get_risk_level(risk_score)
+        prediction = int(model.predict(features)[0]) # 0 or 1 - 0: no CVD, 1: have CVD
+        risk_score = float(model.predict_proba(features)[0][1]) # Probability of class "have CVD disease"
+        risk_level = get_risk_level(risk_score) # low, medium, high risk based on thresholds
 
-        # SHAP explanation
+        # SHAP explanation - tính shap values cho từng feature để tìm ra yếu tố ảnh hưởng nhất đến prediction
         shap_values = explainer.shap_values(features)
-        shap_arr = shap_values[0, :, 1]
+        shap_arr = shap_values[0, :, 1] # Lấy shap values cho class "have CVD disease" (index 1)
 
+        # Lấy top 3 yếu tố ảnh hưởng nhất dựa trên giá trị tuyệt đối của SHAP values
         top_idx = np.argsort(np.abs(shap_arr))[::-1][:3]
         top_factors = [
             {

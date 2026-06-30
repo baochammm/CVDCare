@@ -18,7 +18,7 @@ async function seedAdmin() {
       return;
     }
 
-    const hashedPassword = await bcrypt.hash("12345678", 10);
+    const hashedPassword = await bcrypt.hash("12345678", 10); // hash the password before saving
 
     await User.create({
       userName: "admincvdcare",

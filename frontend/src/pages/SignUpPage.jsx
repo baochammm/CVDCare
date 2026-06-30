@@ -56,8 +56,8 @@ const SignUpPage = () => {
           <div className="w-full">
             <div className="space-y-4">
               <div>
-                <h2 className="text-xl font-semibold">Create an Account</h2>
-                <p className="text-sm opacity-70">
+                <h2 className="text-2xl font-semibold">Create an Account</h2>
+                <p className="text-base opacity-70">
                   Understand your health better with CVD Care
                 </p>
               </div>
@@ -66,7 +66,7 @@ const SignUpPage = () => {
                 {/* USERNAME */}
                 <div className="form-control w-full">
                   <label className="label">
-                    <span className="label-text">User Name</span>
+                    <span className="label-text text-lg font-medium">User Name</span>
                   </label>
                   <input
                     type="text"
@@ -80,7 +80,7 @@ const SignUpPage = () => {
                 {/* EMAIL */}
                 <div className="form-control w-full">
                   <label className="label">
-                    <span className="label-text">Email</span>
+                    <span className="label-text text-lg font-medium">Email</span>
                   </label>
                   <input
                     type="email"
@@ -94,7 +94,7 @@ const SignUpPage = () => {
                 {/* PASSWORD */}
                 <div className="form-control w-full">
                   <label className="label">
-                    <span className="label-text">Password</span>
+                    <span className="label-text text-lg font-medium">Password</span>
                   </label>
                   <input
                     type="password"
@@ -116,7 +116,7 @@ const SignUpPage = () => {
                       checked={termsAccepted}
                       onChange={(e) => setTermsAccepted(e.target.checked)}
                     />
-                    <span className="text-xs leading-tight">
+                    <span className="text-base leading-tight">
                       I agree to the{" "}
                       <span
                         className="text-primary hover:underline cursor-pointer"
@@ -137,7 +137,7 @@ const SignUpPage = () => {
               </div>
 
               <button
-                className="btn btn-primary w-full"
+                className="btn btn-primary w-full text-lg font-medium"
                 onClick={handleSignup}
                 disabled={isPending || !termsAccepted}
               >
@@ -150,7 +150,7 @@ const SignUpPage = () => {
               </button>
 
               <div className="text-center mt-4">
-                <p className="text-sm">
+                <p className="text-base">
                   Already have an account?{" "}
                   <Link to="/login" className="text-primary hover:underline">
                     Sign in

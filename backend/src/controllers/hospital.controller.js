@@ -40,7 +40,7 @@ const EXCLUDE_SPECIALITIES = [
   "dialysis", // lọc thận (không liên quan CVD trực tiếp)
 ];
 
-// Tiếng Việt only — safety net cho OSM data VN còn thưa tag speciality
+// Tiếng Việt — safety net cho OSM data VN còn thưa tag speciality
 // Tiếng Anh đã được cover bởi EXCLUDE_SPECIALITIES
 const NAME_BLACKLIST_VI = [
   "chỉnh hình",

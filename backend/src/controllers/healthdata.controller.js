@@ -7,6 +7,7 @@ const ML_API_URL = process.env.ML_BACKEND_URL || "http://localhost:8000";
 export const getMyHistory = async (req, res) => {
   try {
     const histories = await HealthData.find({
+      // Only fetch records for the logged-in user that are not deleted
       user: req.user._id,
       isDeleted: false,
     }).sort({ createdAt: 1 });
@@ -21,6 +22,7 @@ export const getMyHistory = async (req, res) => {
 export const getLatestPrediction = async (req, res) => {
   try {
     const latest = await HealthData.findOne({
+      // Only fetch the latest record for the logged-in user that is not deleted
       user: req.user._id,
       isDeleted: false,
     }).sort({ createdAt: -1 }); // newest first

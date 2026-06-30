@@ -137,7 +137,7 @@ const AdminDashboard = () => {
                     <td>
                       <span className="badge badge-ghost">{u.role}</span>
                     </td>
-                    <td>{u.city?.formattedAddress || "Not specified"}</td>
+                    <td>{u.city?.formattedAddress || ""}</td>
                     <td>{new Date(u.createdAt).toLocaleDateString()}</td>
                     <td className="space-x-2">
                       <button

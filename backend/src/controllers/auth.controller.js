@@ -93,7 +93,7 @@ export async function login(req, res) {
     res.cookie("jwt", token, {
       maxAge: 1 * 24 * 60 * 60 * 1000,
       httpOnly: true,
-      sameSite: "strict",
+      sameSite: "strict", // Cross-Site Request Forgery protection, ensures cookie is only sent in requests from the same site
       secure: process.env.NODE_ENV === "production",
     });
 

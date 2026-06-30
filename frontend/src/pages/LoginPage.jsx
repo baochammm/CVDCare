@@ -46,14 +46,14 @@ const LoginPage = () => {
           <div className="w-full">
             <div className="space-y-4">
               <div>
-                <h2 className="text-xl font-semibold">Welcome Back</h2>
-                <p className="text-sm opacity-70">Please enter your login details.</p>
+                <h2 className="text-2xl font-semibold">Welcome Back</h2>
+                <p className="text-base opacity-70">Please enter your login details.</p>
               </div>
 
               <div className="flex flex-col gap-3">
                 <div className="form-control w-full space-y-2">
                   <label className="label">
-                    <span className="label-text">User Name</span>
+                    <span className="label-text text-lg font-medium">User Name</span>
                   </label>
                   <input
                     type="text"
@@ -66,7 +66,7 @@ const LoginPage = () => {
 
                 <div className="form-control w-full space-y-2">
                   <label className="label">
-                    <span className="label-text">Password</span>
+                    <span className="label-text text-lg font-medium">Password</span>
                   </label>
                   <input
                     type="password"
@@ -78,7 +78,7 @@ const LoginPage = () => {
                 </div>
 
                 <button
-                  className="btn btn-primary w-full"
+                  className="btn btn-primary w-full text-lg font-medium"
                   onClick={handleLogin}
                   disabled={isPending}
                 >
@@ -91,7 +91,7 @@ const LoginPage = () => {
                 </button>
 
                 <div className="text-center mt-4">
-                  <p className="text-sm">
+                  <p className="text-base">
                     Don't have an account?{" "}
                     <Link to="/signup" className="text-primary hover:underline">
                       Create one
